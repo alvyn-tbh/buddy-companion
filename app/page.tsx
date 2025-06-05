@@ -199,10 +199,10 @@ const HomePage = () => {
                             No app install. No sign-up. Just pick a mode and start.
                         </p>
                         <div className="flex flex-wrap justify-center gap-4">
-                            {['Emotional', 'Travel', 'Corporate', 'Culture'].map((mode, index) => (
+                            {[['Emotional', "#"], ['Travel', "#"], ['Corporate', "chat"], ['Culture', "#"]].map(([mode, href], index) => (
                                 <Link
                                     key={index}
-                                    href={`/${mode.toLowerCase()}`}
+                                    href={`/${href.toLowerCase()}`}
                                     className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                                 >
                                     {mode}
