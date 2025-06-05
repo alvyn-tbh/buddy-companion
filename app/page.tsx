@@ -32,7 +32,7 @@ const HomePage = () => {
                             One Voice. Many Sides. Always There.
                         </h1>
                         <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8">
-                            Your personal AI companion for every side of life - whether you're stressed at work, learning a new culture, lost on the road or just need to talk things through.
+                            Your personal AI companion for every side of life - whether you&apos;re stressed at work, learning a new culture, lost on the road or just need to talk things through.
                         </p>
                         <Link
                             href="/chat"
@@ -50,14 +50,14 @@ const HomePage = () => {
                         className="text-center mb-16"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                            🟦 More Than a Chat. It's Presence.
+                            🟦 More Than a Chat. It&apos;s Presence.
                         </h2>
                         <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-4xl mx-auto">
                             <p className="text-lg text-gray-600 leading-relaxed mb-4">
-                                Buddy AI isn't a chatbot - it's a grounded, emotionally intelligent companion built to adapt to your world. It listens when you need silence, helps when you feel stuck and speaks like someone who understands.
+                                Buddy AI isn&apos;t a chatbot - it&apos;s a grounded, emotionally intelligent companion built to adapt to your world. It listens when you need silence, helps when you feel stuck and speaks like someone who understands.
                             </p>
                             <p className="text-lg font-semibold text-gray-800">
-                                No tasks. No distractions. Just real-time support across life's messy moments.
+                                No tasks. No distractions. Just real-time support across life&apos;s messy moments.
                             </p>
                         </div>
                     </motion.section>
@@ -104,7 +104,7 @@ const HomePage = () => {
                                     <div className="text-3xl mb-3">{mode.icon}</div>
                                     <h3 className="text-xl font-semibold text-gray-900 mb-2">{mode.title}</h3>
                                     <p className="text-gray-600 mb-3">{mode.subtitle}</p>
-                                    <p className="text-gray-700 italic">"{mode.quote}"</p>
+                                    <p className="text-gray-700 italic">&quot;{mode.quote}&quot;</p>
                                 </motion.div>
                             ))}
                         </div>
@@ -136,7 +136,7 @@ const HomePage = () => {
                                 </li>
                                 <li className="flex items-center">
                                     <span className="w-2 h-2 bg-blue-600 rounded-full mr-4"></span>
-                                    Doesn't pretend to be human. Just helpful.
+                                    Doesn&apos;t pretend to be human. Just helpful.
                                 </li>
                             </ul>
                             <p className="text-gray-600 mt-6 text-center italic">
@@ -201,7 +201,7 @@ const HomePage = () => {
                         <div className="flex flex-wrap justify-center gap-4">
                             {['Emotional', 'Travel', 'Corporate', 'Culture'].map((mode, index) => (
                                 <Link
-                                    key={mode}
+                                    key={index}
                                     href={`/${mode.toLowerCase()}`}
                                     className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                                 >
