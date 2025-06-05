@@ -7,11 +7,11 @@ export const ProjectOverview = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="max-w-2xl"
+        className="max-w-3xl px-4 py-8"
       >
         <motion.h1
           whileHover={{ scale: 1.00 }}
-          className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+          className="text-4xl md:text-5xl font-bold mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight"
         >
           Meet your Corporate Wellness Companion
         </motion.h1>

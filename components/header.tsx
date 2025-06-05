@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 
-export default function Header() {
+export default function Header(props: { title: string }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex-shrink-0">
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">BuddyAI | Corporate Wellness</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">{props.title}</span>
           </Link>
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">

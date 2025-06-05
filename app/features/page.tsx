@@ -7,11 +7,11 @@ import Footer from '@/components/footer';
 export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
-      <Header />
+      <Header title="Buddy AI" />
 
       <div className="flex-1">
         {/* What It Is Section */}
-        <section className="pt-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <section className="pt-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-20 left-40 w-48 h-48 bg-purple-300/20 rounded-full blur-3xl animate-float" />
             <div className="absolute bottom-40 right-40 w-48 h-48 bg-indigo-300/20 rounded-full blur-3xl animate-float-delayed" />
