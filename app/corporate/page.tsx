@@ -16,7 +16,7 @@ export default function LandingPage() {
         <div className="absolute top-1/2 right-1/4 w-48 h-48 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-1000"></div>
       </div>
 
-      <Header />
+      <Header title="Buddy AI | Corporate Wellness" />
 
       {/* Main Section */}
       <main className="flex-1 pt-8 pb-0 px-4 sm:px-6 lg:px-8">

@@ -7,7 +7,7 @@ import Footer from '@/components/footer';
 export default function HowItWorksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
-      <Header />
+      <Header title="Buddy AI | Corporate Wellness" />
 
       <div className="flex-1">
         <section className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
