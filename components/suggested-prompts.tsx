@@ -15,8 +15,8 @@ function PureSuggestedPrompts({ sendMessage }: SuggestedPromptsProps) {
       action: "I'm feeling completely drained after today.",
     },
     {
-      label: "Can I just vent for a minute? I am extremely nervous after today",
-      action: "Can I just vent for a minute?",
+      label: "Can I just vent for a minute? I am extremely nervous after today's meeting.",
+      action: "Can I just vent for a minute? I am extremely nervous after today's meeting.",
     },
     {
       label: "I can't stop thinking about that meeting.",
