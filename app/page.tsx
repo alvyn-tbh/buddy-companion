@@ -88,14 +88,14 @@ const HomePage = () => {
                   title: "Emotional Companion",
                   subtitle: "No fixing. No judging. Just space to feel.",
                   quote: "I'm not okay - and I don't want advice. Just to talk.",
-                  link: "/#"
+                  link: "/emotional"
                 },
                 {
                   icon: "🗣️",
                   title: "Culture & Communication Companion",
                   subtitle: "Learn how people think, speak and connect - anywhere in the world.",
                   quote: "How do I politely express disagreement in Korean?",
-                  link: "/#"
+                  link: "/culture"
                 }
               ].map((mode, index) => (
                 <motion.div
@@ -209,7 +209,7 @@ const HomePage = () => {
               No app install. No sign-up. Just pick a mode and start.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              {[['Emotional', "#"], ['Travel', "#"], ['Corporate', "corporate"], ['Culture', "#"]].map(([mode, href], index) => (
+              {[['Emotional', "emotional"], ['Travel', "travel"], ['Corporate', "corporate"], ['Culture', "culture"]].map(([mode, href], index) => (
                 <Link
                   key={index}
                   href={`/${href.toLowerCase()}`}
