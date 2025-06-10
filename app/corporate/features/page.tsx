@@ -1,13 +1,13 @@
 'use client';
 
 import { motion } from "framer-motion";
-import Header from '@/components/header';
+import Header from '@/components/sub-header';
 import Footer from '@/components/footer';
 
 export default function FeaturesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
-      <Header title="Buddy AI | Corporate Wellness" />
+      <Header title="Buddy AI | Corporate Wellness" chat_url="/corporate/chat" features_url="/corporate/features" how_it_works_url="/corporate/how-it-works" />
 
       <div className="flex-1">
         {/* What It Is Section */}

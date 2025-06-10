@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Textarea } from "./textarea";
 import { ProjectOverview } from "./project-overview";
 import { Messages } from "./messages";
-import Header from "./header";
+import Header from "./sub-header";
 import { toast } from "sonner";
 import { SuggestedPrompts } from "./suggested-prompts";
 
@@ -15,7 +15,7 @@ import { SuggestedPrompts } from "./suggested-prompts";
 //   content: string;
 // }
 
-export default function Chat(props: { api: string }) {
+export default function Chat(props: { api: string, chat_url: string, features_url: string, how_it_works_url: string }) {
   const [threadId, setThreadId] = useState<string | null>(null);
 
   const { messages, input, handleInputChange: chatHandleInputChange, handleSubmit, status, stop, setInput } =
@@ -68,7 +68,7 @@ export default function Chat(props: { api: string }) {
 
   return (
     <div className="h-dvh flex flex-col justify-center w-full stretch">
-      <Header title="Buddy AI | Corporate Wellness" />
+      <Header title="Buddy AI | Corporate Wellness" chat_url={props.chat_url} features_url={props.features_url} how_it_works_url={props.how_it_works_url} />
       {displayMessages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
           <ProjectOverview />

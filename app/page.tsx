@@ -74,14 +74,14 @@ const HomePage = () => {
                   title: "Corporate Wellness Companion",
                   subtitle: "When work overwhelms, Buddy helps you pause.",
                   quote: "I've been on back-to-back calls. I just need 60 seconds to reset.",
-                  link: "/corporate/"
+                  link: "/corporate"
                 },
                 {
                   icon: "🌍",
                   title: "Travel Companion",
                   subtitle: "Lost, tired or in a new timezone? Buddy's got your back.",
                   quote: "I just landed in Cairo. What do locals usually do first here?",
-                  link: "/#"
+                  link: "/travel"
                 },
                 {
                   icon: "🧠",
