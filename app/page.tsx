@@ -34,12 +34,12 @@ const HomePage = () => {
             <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8">
               Your personal AI companion for every side of life - whether you&apos;re stressed at work, learning a new culture, lost on the road or just need to talk things through.
             </p>
-            <Link
+            {/* <Link
               href="/corporate/chat"
               className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-10 rounded-full text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
             >
               Meet your AI Buddy
-            </Link>
+            </Link> */}
           </motion.div>
 
           {/* What Buddy AI IS */}
