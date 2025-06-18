@@ -95,7 +95,6 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
           handleInputChange={handleInputChange}
           input={input}
           isLoading={isLoading}
-          status={status}
           stop={stop}
           handleSubmit={handleSubmit}
           isAudioEnabled={isAudioEnabled}

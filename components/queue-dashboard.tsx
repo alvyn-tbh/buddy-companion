@@ -4,11 +4,31 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { RefreshCw, Activity, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
+// Bull Queue Job interface
+interface BullJob {
+  id: string | number;
+  data: Record<string, unknown>;
+  opts: Record<string, unknown>;
+  progress: number;
+  delay: number;
+  timestamp: number;
+  processedOn?: number;
+  finishedOn?: number;
+  failedReason?: string;
+  stacktrace?: string[];
+  returnvalue?: unknown;
+  attemptsMade: number;
+  name: string;
+  queue: {
+    name: string;
+  };
+}
+
 interface QueueStats {
-  waiting: any[];
-  active: any[];
-  completed: any[];
-  failed: any[];
+  waiting: BullJob[];
+  active: BullJob[];
+  completed: BullJob[];
+  failed: BullJob[];
 }
 
 interface QueueStatus {
@@ -54,7 +74,7 @@ export function QueueDashboard() {
   const fetchStatus = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/queue/status');
       if (!response.ok) {
@@ -263,4 +283,4 @@ export function QueueDashboard() {
       )}
     </div>
   );
-} 
+}

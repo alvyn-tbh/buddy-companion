@@ -62,6 +62,7 @@ export function AudioSettings({ isAudioEnabled, onAudioToggle, className = "" }:
       window.speechSynthesis.speak(utterance);
     } catch (error) {
       toast.error("Audio playback not supported");
+      console.log(error);
     }
   };
 

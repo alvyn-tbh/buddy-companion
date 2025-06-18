@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
-import { Volume2, VolumeX, Play, Pause, Loader2 } from "lucide-react";
+import { Play, Pause, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface AudioPlayerProps {

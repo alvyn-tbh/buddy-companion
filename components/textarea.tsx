@@ -8,18 +8,16 @@ interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;
   input: string;
   isLoading: boolean;
-  status: "submitted" | "streaming" | "ready" | "error";
   stop: () => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isAudioEnabled: boolean;
   onAudioToggle: (enabled: boolean) => void;
 }
 
-export function Textarea({ handleInputChange, input, isLoading, status, stop, handleSubmit, isAudioEnabled, onAudioToggle }: InputProps) {
+export function Textarea({ handleInputChange, input, isLoading, stop, handleSubmit, isAudioEnabled, onAudioToggle }: InputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
-  const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -126,7 +124,6 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
       audioChunksRef.current = [];
       transcriptionBufferRef.current = ''; // Reset transcription buffer
       setRecordingStartTime(Date.now());
-      setLastSpeechTime(Date.now());
 
       // Start MediaRecorder
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
@@ -158,9 +155,6 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
         recognitionRef.current.lang = 'en-US';
         
         recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-          // Update last speech time when speech is detected
-          setLastSpeechTime(Date.now());
-          
           // Clear existing silence timer
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
@@ -228,14 +222,11 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
           
           // Collect transcription in buffer
           let finalTranscript = '';
-          let interimTranscript = '';
           
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
               finalTranscript += transcript + ' ';
-            } else {
-              interimTranscript += transcript;
             }
           }
           
@@ -257,7 +248,7 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
       toast.error("Could not access microphone");
       setIsRecording(false);
     }
-  }, [isRecording, isSpeechRecognitionSupported, input, handleInputChange, silenceThreshold, handleSubmit]);
+  }, [isRecording, isSpeechRecognitionSupported, handleInputChange, silenceThreshold, handleSubmit]);
 
   const toggleAudio = useCallback(() => {
     onAudioToggle(!isAudioEnabled);

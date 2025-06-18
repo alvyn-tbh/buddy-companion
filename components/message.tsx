@@ -19,6 +19,11 @@ import {
 } from "lucide-react";
 import { SpinnerIcon } from "./icons";
 
+interface TextPart {
+  type: "text";
+  text: string;
+}
+
 interface ReasoningPart {
   type: "reasoning";
   reasoning: string;
@@ -134,7 +139,7 @@ const PurePreviewMessage = ({
     
     return message.parts
       .filter(part => part.type === "text")
-      .map(part => (part as any).text)
+      .map(part => (part as TextPart).text)
       .join(" ");
   };
 
