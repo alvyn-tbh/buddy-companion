@@ -17,6 +17,7 @@ import { SuggestedPrompts } from "./suggested-prompts";
 
 export default function Chat(props: { api: string, chat_url: string, features_url: string, how_it_works_url: string }) {
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const { messages, input, handleInputChange: chatHandleInputChange, handleSubmit, status, stop, setInput } =
     useChat({
@@ -59,7 +60,7 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
     handleSubmit(formEvent);
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement> | { target: { value: string } }) => {
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => {
     chatHandleInputChange(event as React.ChangeEvent<HTMLTextAreaElement>);
   };
 
@@ -68,7 +69,14 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
 
   return (
     <div className="h-dvh flex flex-col justify-center w-full stretch">
-      <Header title="Buddy AI | Corporate Wellness" chat_url={props.chat_url} features_url={props.features_url} how_it_works_url={props.how_it_works_url} />
+      <Header 
+        title="Buddy AI | Corporate Wellness" 
+        chat_url={props.chat_url} 
+        features_url={props.features_url} 
+        how_it_works_url={props.how_it_works_url}
+        isAudioEnabled={isAudioEnabled}
+        onAudioToggle={setIsAudioEnabled}
+      />
       {displayMessages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
           <ProjectOverview />
@@ -77,7 +85,7 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
           </div>
         </div>
       ) : (
-        <Messages messages={displayMessages} isLoading={isLoading} status={status} />
+        <Messages messages={displayMessages} isLoading={isLoading} status={status} isAudioEnabled={isAudioEnabled} />
       )}
       <form
         onSubmit={handleSubmit}
@@ -90,6 +98,8 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
           status={status}
           stop={stop}
           handleSubmit={handleSubmit}
+          isAudioEnabled={isAudioEnabled}
+          onAudioToggle={setIsAudioEnabled}
         />
       </form>
     </div>

@@ -2,8 +2,16 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
+import { AudioSettings } from './audio-settings';
 
-export default function Header(props: { title: string, chat_url: string, features_url: string, how_it_works_url: string }) {
+export default function Header(props: { 
+  title: string, 
+  chat_url: string, 
+  features_url: string, 
+  how_it_works_url: string,
+  isAudioEnabled?: boolean,
+  onAudioToggle?: (enabled: boolean) => void
+}) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -62,6 +70,15 @@ export default function Header(props: { title: string, chat_url: string, feature
               </div>
               <Link href={props.features_url} className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">Features</Link>
               <Link href={props.how_it_works_url} className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">How it works</Link>
+              
+              {/* Audio Settings */}
+              {props.isAudioEnabled !== undefined && props.onAudioToggle && (
+                <AudioSettings 
+                  isAudioEnabled={props.isAudioEnabled} 
+                  onAudioToggle={props.onAudioToggle}
+                />
+              )}
+              
               <Link href={props.chat_url} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
                 Try Now
               </Link>

@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import equal from "fast-deep-equal";
 
 import { Markdown } from "./markdown";
+import { AudioPlayer } from "./audio-player";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle,
@@ -119,12 +120,54 @@ const PurePreviewMessage = ({
   message,
   isLatestMessage,
   status,
+  isAudioEnabled,
 }: {
   message: TMessage;
   isLoading: boolean;
   status: "error" | "submitted" | "streaming" | "ready";
   isLatestMessage: boolean;
+  isAudioEnabled: boolean;
 }) => {
+  // Extract text content from message parts for audio playback
+  const getMessageText = () => {
+    if (!message.parts) return message.content || "";
+    
+    return message.parts
+      .filter(part => part.type === "text")
+      .map(part => (part as any).text)
+      .join(" ");
+  };
+
+  const messageText = getMessageText();
+
+  // Auto-play audio for the latest completed assistant message
+  useEffect(() => {
+    if (
+      message.role === "assistant" &&
+      isLatestMessage &&
+      isAudioEnabled &&
+      status === "ready" &&
+      messageText.trim()
+    ) {
+      // Small delay to ensure the message is fully rendered
+      const timer = setTimeout(() => {
+        try {
+          window.speechSynthesis.cancel(); // Cancel any existing speech
+          const utterance = new SpeechSynthesisUtterance(messageText);
+          utterance.rate = 0.9;
+          utterance.pitch = 1;
+          utterance.volume = 0.8;
+          utterance.lang = 'en-US';
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('Auto-play audio error:', error);
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText]);
+
   return (
     <AnimatePresence key={message.id}>
       <motion.div
@@ -166,6 +209,14 @@ const PurePreviewMessage = ({
                         })}
                       >
                         <Markdown>{part.text}</Markdown>
+                        {/* Add audio player for assistant messages */}
+                        {message.role === "assistant" && (
+                          <AudioPlayer 
+                            text={part.text} 
+                            isEnabled={isAudioEnabled}
+                            className="mt-2"
+                          />
+                        )}
                       </div>
                     </motion.div>
                   );

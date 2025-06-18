@@ -6,10 +6,12 @@ export const Messages = ({
   messages,
   isLoading,
   status,
+  isAudioEnabled,
 }: {
   messages: TMessage[];
   isLoading: boolean;
   status: "error" | "submitted" | "streaming" | "ready";
+  isAudioEnabled: boolean;
 }) => {
   const [containerRef, endRef] = useScrollToBottom();
   return (
@@ -25,6 +27,7 @@ export const Messages = ({
             isLoading={isLoading}
             message={m}
             status={status}
+            isAudioEnabled={isAudioEnabled}
           />
         ))}
         <div className="h-1" ref={endRef} />
