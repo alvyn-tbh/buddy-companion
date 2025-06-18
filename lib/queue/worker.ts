@@ -4,8 +4,7 @@ import {
   audioProcessingQueue, 
   largeRequestsQueue, 
   analyticsQueue,
-  JOB_TYPES,
-  JOB_PRIORITIES 
+  JOB_TYPES
 } from './bull-queue';
 import { initRedis, closeRedis } from '../redis';
 import { responseCache, generateCacheKey } from '../cache';
@@ -55,7 +54,7 @@ openaiChatQueue.process(JOB_TYPES.CHAT_REQUEST, async (job) => {
     });
 
     // Wait for the run to complete with timeout
-    const result = await waitForRunCompletion(newThreadId, run.id);
+    await waitForRunCompletion(newThreadId, run.id);
     
     // Get the messages
     const threadMessages = await openai.beta.threads.messages.list(newThreadId);
@@ -86,7 +85,7 @@ openaiChatQueue.process(JOB_TYPES.CHAT_REQUEST, async (job) => {
 
 // Process audio transcription
 audioProcessingQueue.process(JOB_TYPES.AUDIO_TRANSCRIPTION, async (job) => {
-  const { audioData, requestId } = job.data;
+  const { requestId } = job.data;
   
   console.log(`Processing audio transcription ${requestId}`);
   
@@ -112,7 +111,7 @@ audioProcessingQueue.process(JOB_TYPES.AUDIO_TRANSCRIPTION, async (job) => {
 
 // Process large analysis requests
 largeRequestsQueue.process(JOB_TYPES.LARGE_ANALYSIS, async (job) => {
-  const { data, requestId } = job.data;
+  const { requestId } = job.data;
   
   console.log(`Processing large analysis ${requestId}`);
   
@@ -155,14 +154,14 @@ analyticsQueue.process(JOB_TYPES.ANALYTICS_EVENT, async (job) => {
 });
 
 // Helper function to wait for OpenAI run completion
-async function waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<any> {
+async function waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<void> {
   const startTime = Date.now();
   
   while (Date.now() - startTime < timeout) {
     const runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
     
     if (runStatus.status === 'completed') {
-      return runStatus;
+      return;
     }
     
     if (runStatus.status === 'failed' || runStatus.status === 'cancelled') {
@@ -200,4 +199,4 @@ async function startWorker() {
   }
 }
 
-startWorker(); 
+startWorker();

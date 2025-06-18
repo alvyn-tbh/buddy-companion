@@ -29,6 +29,13 @@ export function useAudio(): UseAudioReturn {
   const isSpeechSynthesisSupported = typeof window !== 'undefined' && 
     'speechSynthesis' in window;
 
+  const stopPlaying = useCallback(() => {
+    if (isSpeechSynthesisSupported) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
+  }, [isSpeechSynthesisSupported]);
+
   const enableAudio = useCallback(() => {
     setIsAudioEnabled(true);
   }, []);
@@ -36,7 +43,7 @@ export function useAudio(): UseAudioReturn {
   const disableAudio = useCallback(() => {
     setIsAudioEnabled(false);
     stopPlaying();
-  }, []);
+  }, [stopPlaying]);
 
   const toggleAudio = useCallback(() => {
     setIsAudioEnabled(prev => !prev);
@@ -86,13 +93,6 @@ export function useAudio(): UseAudioReturn {
       console.error('Error with speech synthesis:', error);
     }
   }, [isAudioEnabled, isSpeechSynthesisSupported]);
-
-  const stopPlaying = useCallback(() => {
-    if (isSpeechSynthesisSupported) {
-      window.speechSynthesis.cancel();
-    }
-    setIsPlaying(false);
-  }, [isSpeechSynthesisSupported]);
 
   // Cleanup on unmount
   useEffect(() => {

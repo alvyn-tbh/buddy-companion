@@ -1,12 +1,12 @@
-interface QueueItem {
+interface QueueItem<T = unknown> {
   id: string;
   priority: number;
-  data: any;
+  data: T;
   retries: number;
   maxRetries: number;
   timestamp: number;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  resolve: (value: T) => void;
+  reject: (error: Error) => void;
 }
 
 interface QueueConfig {
@@ -17,8 +17,8 @@ interface QueueConfig {
   rateLimitWindow: number;
 }
 
-abstract class RequestQueue {
-  private queue: QueueItem[] = [];
+abstract class RequestQueue<T = unknown> {
+  private queue: QueueItem<T>[] = [];
   private processing: Set<string> = new Set();
   private config: QueueConfig;
   private rateLimitCount = 0;
@@ -35,20 +35,20 @@ abstract class RequestQueue {
     };
   }
 
-  async add<T>(
-    data: any,
+  async add<R = T>(
+    data: T,
     priority: number = 0,
     maxRetries: number = this.config.maxRetries
-  ): Promise<T> {
+  ): Promise<R> {
     return new Promise((resolve, reject) => {
-      const item: QueueItem = {
+      const item: QueueItem<T> = {
         id: Math.random().toString(36).substr(2, 9),
         priority,
         data,
         retries: 0,
         maxRetries,
         timestamp: Date.now(),
-        resolve,
+        resolve: resolve as (value: T) => void,
         reject,
       };
 
@@ -89,7 +89,7 @@ abstract class RequestQueue {
         this.queue.unshift(item); // Add back to front of queue
         setTimeout(() => this.process(), this.config.retryDelay * item.retries);
       } else {
-        item.reject(error);
+        item.reject(error instanceof Error ? error : new Error(String(error)));
       }
     } finally {
       this.processing.delete(item.id);
@@ -97,7 +97,7 @@ abstract class RequestQueue {
     }
   }
 
-  protected abstract processItem(item: QueueItem): Promise<any>;
+  protected abstract processItem(item: QueueItem<T>): Promise<T>;
 
   private checkRateLimit(): boolean {
     const now = Date.now();

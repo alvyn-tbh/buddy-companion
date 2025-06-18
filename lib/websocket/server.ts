@@ -209,11 +209,11 @@ export class WebSocketServer {
   }
 
   // Public methods for external use
-  public emitToRoom(room: string, event: string, data: any) {
+  public emitToRoom<T = unknown>(room: string, event: string, data: T) {
     this.io.to(room).emit(event, data);
   }
 
-  public emitToUser(userId: string, event: string, data: any) {
+  public emitToUser<T = unknown>(userId: string, event: string, data: T) {
     // Find socket by userId
     for (const [socketId, clientData] of this.connectedClients.entries()) {
       if (clientData.userId === userId) {

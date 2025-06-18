@@ -1,9 +1,16 @@
 import { OpenAI } from 'openai';
-import { RequestQueue, type QueueItem } from './queue';
+import { RequestQueue, type QueueItem, type QueueConfig } from './queue';
 import { responseCache, generateCacheKey } from './cache';
 
+// Import the ChatMessage type from cache
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  id?: string;
+}
+
 interface OpenAIRequest {
-  messages: any[];
+  messages: ChatMessage[];
   threadId?: string;
   assistantId: string;
   apiKey: string;
@@ -14,10 +21,10 @@ interface OpenAIResponse {
   threadId: string;
 }
 
-class OpenAIQueue extends RequestQueue {
+class OpenAIQueue extends RequestQueue<OpenAIRequest> {
   private openai: OpenAI;
 
-  constructor(apiKey: string, config?: any) {
+  constructor(apiKey: string, config?: Partial<QueueConfig>) {
     super({
       maxConcurrent: 2, // Limit concurrent OpenAI calls
       maxRetries: 3,
@@ -31,10 +38,20 @@ class OpenAIQueue extends RequestQueue {
   }
 
   async processOpenAIRequest(request: OpenAIRequest): Promise<OpenAIResponse> {
-    return this.add(request, 0);
+    // Use the base add method and handle the response extraction
+    await this.add(request, 0);
+    
+    // Get the response from cache
+    const cacheKey = generateCacheKey(request.messages, request.assistantId);
+    const cachedResponse = responseCache.get(cacheKey);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    throw new Error('No response found after processing');
   }
 
-  protected async processItem(item: QueueItem): Promise<OpenAIResponse> {
+  protected async processItem(item: QueueItem<OpenAIRequest>): Promise<OpenAIRequest> {
     const request: OpenAIRequest = item.data;
     
     // Check cache first
@@ -42,7 +59,7 @@ class OpenAIQueue extends RequestQueue {
     const cachedResponse = responseCache.get(cacheKey);
     if (cachedResponse) {
       console.log('Cache hit for request:', cacheKey);
-      return cachedResponse;
+      return request;
     }
 
     try {
@@ -71,7 +88,7 @@ class OpenAIQueue extends RequestQueue {
       });
 
       // Wait for the run to complete with timeout
-      const result = await this.waitForRunCompletion(threadId, run.id);
+      await this.waitForRunCompletion(threadId, run.id);
       
       // Get the messages
       const threadMessages = await this.openai.beta.threads.messages.list(threadId);
@@ -90,7 +107,7 @@ class OpenAIQueue extends RequestQueue {
       // Cache the response
       responseCache.set(cacheKey, response, 300000); // 5 minutes
 
-      return response;
+      return request;
 
     } catch (error) {
       console.error('OpenAI request failed:', error);
@@ -98,14 +115,14 @@ class OpenAIQueue extends RequestQueue {
     }
   }
 
-  private async waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<any> {
+  private async waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<void> {
     const startTime = Date.now();
     
     while (Date.now() - startTime < timeout) {
       const runStatus = await this.openai.beta.threads.runs.retrieve(threadId, runId);
       
       if (runStatus.status === 'completed') {
-        return runStatus;
+        return;
       }
       
       if (runStatus.status === 'failed' || runStatus.status === 'cancelled') {
