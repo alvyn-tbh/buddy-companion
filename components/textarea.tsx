@@ -19,13 +19,17 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
+  const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isProcessingRef = useRef(false);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptionBufferRef = useRef<string>('');
   const maxRecordingTime = 300000; // 5 minutes max recording time
+  const silenceThreshold = 5000; // 5 seconds of silence
 
   // Check if speech recognition is supported
   const isSpeechRecognitionSupported = typeof window !== 'undefined' && 
@@ -45,7 +49,7 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
         mediaRecorderRef.current = null;
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => {
+        streamRef.current.getTracks().forEach((track: MediaStreamTrack) => {
           track.stop();
         });
         streamRef.current = null;
@@ -57,199 +61,203 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
     }
   }, []);
 
-  const startSpeechRecognition = useCallback(() => {
-    if (!isSpeechRecognitionSupported || isProcessingRef.current) {
-      return;
-    }
-
-    try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-      recognitionRef.current.maxAlternatives = 1;
-
-      let finalTranscript = '';
-      let isFirstResult = true;
-
-      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-        if (!isRecording) return; // Prevent processing after recording stopped
-        
-        let interimTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-
-        // For the first result, replace the input. For subsequent results, append.
-        if (isFirstResult) {
-          handleInputChange({ target: { value: finalTranscript + interimTranscript } });
-          isFirstResult = false;
-        } else {
-          const currentInput = input.trim();
-          const newInput = currentInput + finalTranscript + interimTranscript;
-          handleInputChange({ target: { value: newInput } });
-        }
-      };
-
-      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'no-speech') {
-          toast.error("No speech detected. Please try again.");
-        } else if (event.error === 'network') {
-          toast.error("Network error. Please check your connection.");
-        } else {
-          toast.error(`Speech recognition error: ${event.error}`);
-        }
-        setIsRecording(false);
-        setIsTranscribing(false);
-        cleanupAudioResources();
-      };
-
-      recognitionRef.current.onend = () => {
-        if (isRecording) {
-          // Only restart if we're still supposed to be recording
-          recognitionRef.current?.start();
-        } else {
-          setIsRecording(false);
-          setIsTranscribing(false);
-          isFirstResult = true;
-        }
-      };
-
-      recognitionRef.current.start();
-    } catch (error) {
-      console.error('Error starting speech recognition:', error);
-      toast.error("Failed to start speech recognition");
-      setIsRecording(false);
-      setIsTranscribing(false);
-    }
-  }, [isSpeechRecognitionSupported, isRecording, input, handleInputChange, cleanupAudioResources]);
-
-  const stopSpeechRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-  }, []);
-
   const handleMicClick = useCallback(async () => {
-    if (isProcessingRef.current) {
-      return; // Prevent multiple simultaneous operations
-    }
-
     if (isRecording) {
-      // Stop recording
-      isProcessingRef.current = true;
+      // Stop recording - wait for final transcription
       setIsRecording(false);
       setIsTranscribing(true);
       
-      try {
-        mediaRecorderRef.current?.stop();
-        stopSpeechRecognition();
-      } catch (error) {
-        console.error('Error stopping recording:', error);
-        setIsTranscribing(false);
+      // Clear silence timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
       }
-    } else {
-      try {
-        isProcessingRef.current = true;
-        
-        // Request microphone permission with better error handling
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 44100,
-            channelCount: 1
-          } 
-        });
-        
-        streamRef.current = stream;
-        audioChunksRef.current = [];
-        setRecordingStartTime(Date.now());
-
-        // Set up MediaRecorder with fallback MIME types
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : MediaRecorder.isTypeSupported('audio/webm') 
-            ? 'audio/webm' 
-            : 'audio/mp4';
-
-        mediaRecorderRef.current = new MediaRecorder(stream, {
-          mimeType,
-          audioBitsPerSecond: 128000
-        });
-
-        mediaRecorderRef.current.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
+      
+      // Stop media recorder first
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+      
+      // Stop stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        streamRef.current = null;
+      }
+      
+      // Stop speech recognition immediately
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      
+      // Process the recorded audio for transcription
+      setTimeout(() => {
+        try {
+          // Put the collected transcription in the textarea
+          if (transcriptionBufferRef.current.trim()) {
+            handleInputChange({ target: { value: transcriptionBufferRef.current.trim() } });
           }
-        };
-
-        mediaRecorderRef.current.onstop = async () => {
-          try {
-            const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-            
-            // If speech recognition is supported, use it for transcription
-            if (isSpeechRecognitionSupported) {
-              // Speech recognition results are already handled in onresult
-              setIsTranscribing(false);
-            } else {
-              // Fallback: show a message that transcription is not available
-              handleInputChange({ target: { value: input + " [Audio recorded - transcription not available in this browser]" } });
-              setIsTranscribing(false);
-            }
-
-            // Clean up the stream
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach(track => track.stop());
-              streamRef.current = null;
-            }
-          } catch (error) {
-            console.error('Error processing audio:', error);
-            toast.error("Error processing audio recording");
-            setIsTranscribing(false);
-          } finally {
-            isProcessingRef.current = false;
-          }
-        };
-
-        // Start recording
-        mediaRecorderRef.current.start(1000); // Collect data every second
-        setIsRecording(true);
-        
-        // Start speech recognition
-        startSpeechRecognition();
-        
-        toast.success("Recording started... Speak now!");
-      } catch (error) {
-        console.error("Error accessing microphone:", error);
-        isProcessingRef.current = false;
-        
-        if (error instanceof Error) {
-          if (error.name === 'NotAllowedError') {
-            toast.error("Microphone access denied. Please allow microphone permissions and try again.");
-          } else if (error.name === 'NotFoundError') {
-            toast.error("No microphone found. Please connect a microphone and try again.");
-          } else if (error.name === 'NotReadableError') {
-            toast.error("Microphone is already in use by another application.");
-          } else {
-            toast.error("Could not access microphone. Please check permissions and try again.");
-          }
-        } else {
-          toast.error("Could not access microphone. Please check permissions and try again.");
+          
+          setIsTranscribing(false);
+          isProcessingRef.current = false;
+        } catch (error) {
+          console.error('Error processing audio:', error);
+          setIsTranscribing(false);
+          isProcessingRef.current = false;
+          toast.error("Error processing audio recording");
         }
-      }
+      }, 500);
+      
+      return;
     }
-  }, [isRecording, isSpeechRecognitionSupported, input, handleInputChange, startSpeechRecognition, stopSpeechRecognition]);
+
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+      transcriptionBufferRef.current = ''; // Reset transcription buffer
+      setRecordingStartTime(Date.now());
+      setLastSpeechTime(Date.now());
+
+      // Start MediaRecorder
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
+
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+
+      mediaRecorderRef.current.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        // Audio recording stopped, will be processed in handleMicClick
+        isProcessingRef.current = false;
+      };
+
+      mediaRecorderRef.current.start(1000);
+      setIsRecording(true);
+      
+      // Start speech recognition for collecting transcription
+      if (isSpeechRecognitionSupported) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+        
+        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+          // Update last speech time when speech is detected
+          setLastSpeechTime(Date.now());
+          
+          // Clear existing silence timer
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+          }
+          
+          // Start new silence timer
+          silenceTimerRef.current = setTimeout(() => {
+            if (isRecording) {
+              toast.info("Stopping recording and sending message...");
+              // Stop recording first
+              setIsRecording(false);
+              setIsTranscribing(true);
+              
+              // Clear silence timer
+              if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+              }
+              
+              // Stop media recorder first
+              if (mediaRecorderRef.current) {
+                mediaRecorderRef.current.stop();
+                mediaRecorderRef.current = null;
+              }
+              
+              // Stop stream
+              if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+                streamRef.current = null;
+              }
+              
+              // Stop speech recognition immediately
+              if (recognitionRef.current) {
+                recognitionRef.current.stop();
+                recognitionRef.current = null;
+              }
+              
+              // Process the recorded audio for transcription
+              setTimeout(() => {
+                try {
+                  // Put the collected transcription in the textarea
+                  if (transcriptionBufferRef.current.trim()) {
+                    handleInputChange({ target: { value: transcriptionBufferRef.current.trim() } });
+                  }
+                  
+                  setIsTranscribing(false);
+                  isProcessingRef.current = false;
+                  
+                  // Auto-submit the message
+                  if (transcriptionBufferRef.current.trim()) {
+                    const formEvent = {
+                      preventDefault: () => { },
+                    } as React.FormEvent<HTMLFormElement>;
+                    handleSubmit(formEvent);
+                  }
+                } catch (error) {
+                  console.error('Error processing audio:', error);
+                  setIsTranscribing(false);
+                  isProcessingRef.current = false;
+                  toast.error("Error processing audio recording");
+                }
+              }, 500);
+            }
+          }, silenceThreshold);
+          
+          // Collect transcription in buffer
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          // Update the transcription buffer
+          transcriptionBufferRef.current += finalTranscript;
+        };
+
+        recognitionRef.current.onerror = () => {
+          // Ignore errors, just stop
+          setIsRecording(false);
+        };
+
+        recognitionRef.current.start();
+      }
+      
+      toast.success("Recording started... Speak now!");
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Could not access microphone");
+      setIsRecording(false);
+    }
+  }, [isRecording, isSpeechRecognitionSupported, input, handleInputChange, silenceThreshold, handleSubmit]);
 
   const toggleAudio = useCallback(() => {
     onAudioToggle(!isAudioEnabled);
@@ -275,11 +283,14 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
   useEffect(() => {
     return () => {
       cleanupAudioResources();
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
     };
   }, [cleanupAudioResources]);
 
-  // Prevent recording when loading
-  const canRecord = !isLoading && !isTranscribing && !isProcessingRef.current;
+  // Prevent recording when loading, but allow stopping when recording
+  const canRecord = !isLoading && !isTranscribing && (!isProcessingRef.current || isRecording);
 
   return (
     <div className="relative">
@@ -335,12 +346,12 @@ export function Textarea({ handleInputChange, input, isLoading, status, stop, ha
         </Button>
 
         {/* Send/Stop Button */}
-        {isLoading ? (
+        {isLoading || isRecording ? (
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={stop}
+            onClick={isRecording ? handleMicClick : stop}
           >
             <StopCircle className="h-5 w-5" />
           </Button>
