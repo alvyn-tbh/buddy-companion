@@ -1,25 +1,83 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getQueueStats } from '@/lib/queue/bull-queue';
 import { redisHealthCheck, getRedisInfo } from '@/lib/redis';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+// JWT verification function (same as in auth route)
+function verifyToken(token: string): boolean {
   try {
-    // Check Redis health
-    const redisHealth = await redisHealthCheck();
-    const redisInfo = getRedisInfo();
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
     
-    // Get queue statistics
-    const queueStats = await getQueueStats();
+    const [header, payload, signature] = parts;
+    const expectedSignature = crypto
+      .createHmac('sha256', JWT_SECRET)
+      .update(`${header}.${payload}`)
+      .digest('base64url');
     
-    // Calculate summary statistics
-    const summary = {
-      totalWaiting: Object.values(queueStats).reduce((sum, queue) => sum + queue.waiting.length, 0),
-      totalActive: Object.values(queueStats).reduce((sum, queue) => sum + queue.active.length, 0),
-      totalCompleted: Object.values(queueStats).reduce((sum, queue) => sum + queue.completed.length, 0),
-      totalFailed: Object.values(queueStats).reduce((sum, queue) => sum + queue.failed.length, 0),
+    return signature === expectedSignature;
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Check authentication
+    const token = request.cookies.get('admin-auth')?.value;
+    
+    if (!token || !verifyToken(token)) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check Redis health with better error handling
+    let redisHealth = false;
+    let redisInfo = { url: 'unknown', isConnected: false, isInitialized: false };
+    
+    try {
+      redisHealth = await redisHealthCheck();
+      redisInfo = getRedisInfo();
+    } catch (redisError) {
+      console.error('Redis health check error:', redisError);
+      redisHealth = false;
+      redisInfo = {
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        isConnected: false,
+        isInitialized: false,
+      };
+    }
+    
+    // Get queue statistics (only if Redis is healthy)
+    let queueStats = {};
+    let summary = {
+      totalWaiting: 0,
+      totalActive: 0,
+      totalCompleted: 0,
+      totalFailed: 0,
     };
+    
+    if (redisHealth) {
+      try {
+        queueStats = await getQueueStats();
+        
+        // Calculate summary statistics
+        summary = {
+          totalWaiting: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.waiting.length, 0),
+          totalActive: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.active.length, 0),
+          totalCompleted: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.completed.length, 0),
+          totalFailed: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.failed.length, 0),
+        };
+      } catch (queueError) {
+        console.error('Queue stats error:', queueError);
+        // Continue with empty stats
+      }
+    }
     
     const status = {
       timestamp: new Date().toISOString(),
