@@ -15,11 +15,11 @@ import {
   HardDrive,
   Network,
   Zap,
-  BarChart3,
   Database as DatabaseIcon,
   Activity,
-  PieChart,
-  Info,
+  // Info,
+  // PieChart,
+  // BarChart3,
 } from 'lucide-react';
 
 interface DatabaseMetrics {
@@ -47,7 +47,7 @@ export default function StorageDashboard() {
   const [databaseData, setDatabaseData] = useState<DatabaseMetrics | null>(null);
   const [recentMetrics, setRecentMetrics] = useState<RecentDatabaseMetric[]>([]);
   const [loading, setLoading] = useState(true);
-  const [environment, setEnvironment] = useState<'dev' | 'prod'>('prod');
+  const [environment] = useState<'dev' | 'prod'>('prod');
   const [timeRange, setTimeRange] = useState(30);
   
   // Mock storage limits for demonstration (in bytes)
