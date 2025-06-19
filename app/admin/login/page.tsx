@@ -39,6 +39,7 @@ export default function AdminLoginPage() {
         toast.error('Login failed');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred during login');
       toast.error('Login failed');
     } finally {
