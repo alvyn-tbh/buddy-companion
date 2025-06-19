@@ -1,9 +1,10 @@
 'use client';
 
 import { StagewiseToolbar } from '@stagewise/toolbar-next';
+import { ReactPlugin } from '@stagewise-plugins/react';
 
 const stagewiseConfig = {
-  plugins: []
+  plugins: [ReactPlugin]
 };
 
 export function StagewiseDevTool() {

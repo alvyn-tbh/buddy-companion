@@ -3,7 +3,6 @@
 import type { Message as TMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
 import { memo, useCallback, useEffect, useState } from "react";
-import equal from "fast-deep-equal";
 
 import { Markdown } from "./markdown";
 import { AudioPlayer } from "./audio-player";
@@ -154,20 +153,22 @@ const PurePreviewMessage = ({
       status === "ready" &&
       messageText.trim()
     ) {
-      // Small delay to ensure the message is fully rendered
+      // Add a longer delay and check if user is still on the page
       const timer = setTimeout(() => {
-        try {
-          window.speechSynthesis.cancel(); // Cancel any existing speech
-          const utterance = new SpeechSynthesisUtterance(messageText);
-          utterance.rate = 0.9;
-          utterance.pitch = 1;
-          utterance.volume = 0.8;
-          utterance.lang = 'en-US';
-          window.speechSynthesis.speak(utterance);
-        } catch (error) {
-          console.error('Auto-play audio error:', error);
+        if (!document.hidden) { // Only auto-play if tab is active
+          try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(messageText);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 0.8;
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+          } catch (error) {
+            console.error('Auto-play audio error:', error);
+          }
         }
-      }, 500);
+      }, 1000); // Increased delay to 1 second
 
       return () => clearTimeout(timer);
     }
@@ -287,11 +288,20 @@ const PurePreviewMessage = ({
 };
 
 export const Message = memo(PurePreviewMessage, (prevProps, nextProps) => {
+  // More efficient comparison
   if (prevProps.status !== nextProps.status) return false;
-  if (prevProps.message.annotations !== nextProps.message.annotations)
-    return false;
-  // if (prevProps.message.content !== nextProps.message.content) return false;
-  if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
-
+  if (prevProps.isLatestMessage !== nextProps.isLatestMessage) return false;
+  if (prevProps.isAudioEnabled !== nextProps.isAudioEnabled) return false;
+  
+  // Deep comparison only when necessary
+  if (prevProps.message.id !== nextProps.message.id) return false;
+  if (prevProps.message.role !== nextProps.message.role) return false;
+  
+  // Only compare content if it's actually different
+  if (prevProps.message.content !== nextProps.message.content) return false;
+  
+  // Use shallow comparison for parts if possible
+  if (prevProps.message.parts?.length !== nextProps.message.parts?.length) return false;
+  
   return true;
 });

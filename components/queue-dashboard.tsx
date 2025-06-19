@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { RefreshCw, Activity, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { RefreshCw, Activity, AlertTriangle, CheckCircle, Clock, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Bull Queue Job interface
 interface BullJob {
@@ -70,6 +72,7 @@ export function QueueDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const router = useRouter();
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -78,6 +81,11 @@ export function QueueDashboard() {
     try {
       const response = await fetch('/api/queue/status');
       if (!response.ok) {
+        if (response.status === 401) {
+          // Redirect to login if unauthorized
+          router.push('/admin/login');
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
@@ -86,6 +94,23 @@ export function QueueDashboard() {
       setError(err instanceof Error ? err.message : 'Failed to fetch status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/admin/logout', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        toast.success('Logged out successfully');
+        router.push('/admin/login');
+      } else {
+        toast.error('Logout failed');
+      }
+    } catch (error) {
+      toast.error('Logout failed');
     }
   };
 
@@ -151,6 +176,15 @@ export function QueueDashboard() {
           <Button onClick={fetchStatus} disabled={loading} size="sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
           </Button>
         </div>
       </div>
