@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  LogOut,
   RefreshCw,
 } from 'lucide-react';
 
