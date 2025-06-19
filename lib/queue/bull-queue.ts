@@ -1,6 +1,6 @@
 import Queue from 'bull';
 import type { Queue as BullQueue } from 'bull';
-import { redisClient } from '../redis';
+import { redisClient, initRedis, isRedisReady } from '../redis';
 
 // Queue names
 export const QUEUE_NAMES = {
@@ -47,13 +47,16 @@ let _audioProcessingQueue: BullQueue | null = null;
 let _largeRequestsQueue: BullQueue | null = null;
 let _analyticsQueue: BullQueue | null = null;
 
-// Check if Redis is ready before creating queues
+// Ensure Redis connection is established before creating queues
 async function ensureRedisConnection(): Promise<boolean> {
   try {
-    if (!redisClient.isReady) {
-      console.log('🔄 Redis not ready, attempting to connect...');
-      await redisClient.connect();
+    // Check if already ready first
+    if (isRedisReady()) {
+      return true;
     }
+    
+    // Use the centralized Redis connection management
+    await initRedis();
     
     // Test connection
     await redisClient.ping();
@@ -186,31 +189,51 @@ let _legacyLargeRequestsQueue: BullQueue | null = null;
 let _legacyAnalyticsQueue: BullQueue | null = null;
 
 export const openaiChatQueue = (async () => {
-  if (!_legacyOpenaiChatQueue) {
-    _legacyOpenaiChatQueue = await getOpenaiChatQueue();
+  try {
+    if (!_legacyOpenaiChatQueue) {
+      _legacyOpenaiChatQueue = await getOpenaiChatQueue();
+    }
+    return _legacyOpenaiChatQueue;
+  } catch (error) {
+    console.error('❌ Failed to initialize legacy openaiChatQueue:', error);
+    throw error;
   }
-  return _legacyOpenaiChatQueue;
 })();
 
 export const audioProcessingQueue = (async () => {
-  if (!_legacyAudioProcessingQueue) {
-    _legacyAudioProcessingQueue = await getAudioProcessingQueue();
+  try {
+    if (!_legacyAudioProcessingQueue) {
+      _legacyAudioProcessingQueue = await getAudioProcessingQueue();
+    }
+    return _legacyAudioProcessingQueue;
+  } catch (error) {
+    console.error('❌ Failed to initialize legacy audioProcessingQueue:', error);
+    throw error;
   }
-  return _legacyAudioProcessingQueue;
 })();
 
 export const largeRequestsQueue = (async () => {
-  if (!_legacyLargeRequestsQueue) {
-    _legacyLargeRequestsQueue = await getLargeRequestsQueue();
+  try {
+    if (!_legacyLargeRequestsQueue) {
+      _legacyLargeRequestsQueue = await getLargeRequestsQueue();
+    }
+    return _legacyLargeRequestsQueue;
+  } catch (error) {
+    console.error('❌ Failed to initialize legacy largeRequestsQueue:', error);
+    throw error;
   }
-  return _legacyLargeRequestsQueue;
 })();
 
 export const analyticsQueue = (async () => {
-  if (!_legacyAnalyticsQueue) {
-    _legacyAnalyticsQueue = await getAnalyticsQueue();
+  try {
+    if (!_legacyAnalyticsQueue) {
+      _legacyAnalyticsQueue = await getAnalyticsQueue();
+    }
+    return _legacyAnalyticsQueue;
+  } catch (error) {
+    console.error('❌ Failed to initialize legacy analyticsQueue:', error);
+    throw error;
   }
-  return _legacyAnalyticsQueue;
 })();
 
 // Queue monitoring with error handling
@@ -286,4 +309,4 @@ console.log('🔧 Bull Queue Redis Config:', {
   port: redisConfig.port,
   db: redisConfig.db,
   hasPassword: !!redisConfig.password,
-}); 
+});

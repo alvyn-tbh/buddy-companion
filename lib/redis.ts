@@ -1,5 +1,12 @@
 import { createClient } from 'redis';
 
+// Global error handling for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  if (reason instanceof Error && reason.message.includes('Redis')) {
+    console.error('❌ Unhandled Redis promise rejection:', reason);
+  }
+});
+
 // Redis client for Bull Queue
 export const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -31,37 +38,69 @@ export const cacheClient = createClient({
 // Connection state tracking
 let isInitializing = false;
 let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 // Initialize Redis connections
 export async function initRedis() {
-  if (isInitializing) {
-    // Wait for ongoing initialization
-    while (isInitializing) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+  // If already initialized and connected, return immediately
+  if (isInitialized && redisClient.isReady && cacheClient.isReady) {
     return;
   }
 
-  if (isInitialized && redisClient.isReady && cacheClient.isReady) {
-    return; // Already connected
+  // If initialization is in progress, wait for it
+  if (isInitializing && initPromise) {
+    return initPromise;
   }
 
+  // Start new initialization
   isInitializing = true;
+  initPromise = performInit();
   
+  try {
+    await initPromise;
+  } finally {
+    isInitializing = false;
+    initPromise = null;
+  }
+}
+
+async function performInit() {
   try {
     console.log('Connecting to Redis at:', process.env.REDIS_URL || 'redis://localhost:6379');
     
-    // Connect both clients
+    // Connect both clients safely
     const connectPromises = [];
     
-    if (!redisClient.isReady) {
-      connectPromises.push(redisClient.connect());
+    if (!redisClient.isReady && !redisClient.isOpen) {
+      connectPromises.push(redisClient.connect().catch(err => {
+        if (err.message !== 'Socket already opened') {
+          throw err;
+        }
+      }));
     }
-    if (!cacheClient.isReady) {
-      connectPromises.push(cacheClient.connect());
+    if (!cacheClient.isReady && !cacheClient.isOpen) {
+      connectPromises.push(cacheClient.connect().catch(err => {
+        if (err.message !== 'Socket already opened') {
+          throw err;
+        }
+      }));
     }
     
-    await Promise.all(connectPromises);
+    if (connectPromises.length > 0) {
+      await Promise.all(connectPromises);
+    }
+    
+    // Wait for both clients to be ready
+    let attempts = 0;
+    const maxAttempts = 10;
+    while ((!redisClient.isReady || !cacheClient.isReady) && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    if (!redisClient.isReady || !cacheClient.isReady) {
+      throw new Error('Redis clients failed to become ready');
+    }
     
     console.log('✅ Redis connections established successfully');
     isInitialized = true;
@@ -74,8 +113,6 @@ export async function initRedis() {
     console.error('❌ Failed to connect to Redis:', error);
     isInitialized = false;
     throw error;
-  } finally {
-    isInitializing = false;
   }
 }
 
@@ -101,8 +138,12 @@ export async function redisHealthCheck() {
     // Ensure connections are established
     await initRedis();
     
-    const ping1 = await redisClient.ping();
-    const ping2 = await cacheClient.ping();
+    // Test both connections
+    const [ping1, ping2] = await Promise.all([
+      redisClient.ping(),
+      cacheClient.ping()
+    ]);
+    
     return ping1 === 'PONG' && ping2 === 'PONG';
   } catch (error) {
     console.error('❌ Redis health check failed:', error);
@@ -110,11 +151,19 @@ export async function redisHealthCheck() {
   }
 }
 
+// Check if Redis is ready without attempting to connect
+export function isRedisReady(): boolean {
+  return redisClient.isReady && cacheClient.isReady && isInitialized;
+}
+
 // Get Redis connection info
 export function getRedisInfo() {
   return {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
-    isConnected: redisClient.isReady && cacheClient.isReady,
+    isConnected: isRedisReady(),
     isInitialized,
+    redisClientReady: redisClient.isReady,
+    cacheClientReady: cacheClient.isReady,
+    isInitializing,
   };
-} 
+}
