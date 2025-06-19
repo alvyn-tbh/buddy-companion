@@ -68,7 +68,7 @@ async function ensureRedisConnection(): Promise<boolean> {
 }
 
 // Queue factory function with error handling
-async function createQueue(name: string, options: any = {}): Promise<BullQueue> {
+async function createQueue(name: string, options: Queue.QueueOptions = {}): Promise<BullQueue> {
   try {
     // Ensure Redis is connected before creating queue
     const isConnected = await ensureRedisConnection();

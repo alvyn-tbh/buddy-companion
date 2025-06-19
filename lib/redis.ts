@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 
 // Global error handling for unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   if (reason instanceof Error && reason.message.includes('Redis')) {
     console.error('❌ Unhandled Redis promise rejection:', reason);
   }
