@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { RefreshCw, Activity, AlertTriangle, CheckCircle, Clock, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  LogOut,
+  RefreshCw,
+} from 'lucide-react';
 
 // Bull Queue Job interface
 interface BullJob {
@@ -71,59 +77,64 @@ export function QueueDashboard() {
   const [status, setStatus] = useState<QueueStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const router = useRouter();
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
-      const response = await fetch('/api/queue/status');
+      const response = await fetch('/api/queue/status', {
+        credentials: 'include',
+      });
+      
       if (!response.ok) {
         if (response.status === 401) {
-          // Redirect to login if unauthorized
-          router.push('/admin/login');
+          window.location.href = '/admin/login';
           return;
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
       setStatus(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch status');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch status';
+      setError(errorMessage);
+      toast.error('Failed to fetch queue status');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', {
         method: 'POST',
+        credentials: 'include',
       });
       
       if (response.ok) {
-        toast.success('Logged out successfully');
-        router.push('/admin/login');
+        window.location.href = '/admin/login';
       } else {
         toast.error('Logout failed');
       }
     } catch (error) {
+      console.error('Logout failed:', error);
       toast.error('Logout failed');
     }
   };
 
   useEffect(() => {
     fetchStatus();
-  }, []);
+  }, [fetchStatus]);
 
   useEffect(() => {
     if (autoRefresh) {
       const interval = setInterval(fetchStatus, 5000);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchStatus]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
