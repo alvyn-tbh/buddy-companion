@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getQueueStats } from '@/lib/queue/bull-queue';
 import { redisHealthCheck, getRedisInfo } from '@/lib/redis';
 import crypto from 'crypto';
+import type { Job } from 'bull';
 
 export const runtime = 'nodejs';
+
+// Queue stats interface using Bull Queue Job type
+interface QueueStats {
+  waiting: Job[];
+  active: Job[];
+  completed: Job[];
+  failed: Job[];
+}
 
 // JWT verification function (same as in auth route)
 function verifyToken(token: string): boolean {
@@ -54,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get queue statistics (only if Redis is healthy)
-    let queueStats = {};
+    let queueStats: Record<string, QueueStats> = {};
     let summary = {
       totalWaiting: 0,
       totalActive: 0,
@@ -64,14 +73,14 @@ export async function GET(request: NextRequest) {
     
     if (redisHealth) {
       try {
-        queueStats = await getQueueStats();
+        queueStats = await getQueueStats() as Record<string, QueueStats>;
         
         // Calculate summary statistics
         summary = {
-          totalWaiting: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.waiting.length, 0),
-          totalActive: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.active.length, 0),
-          totalCompleted: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.completed.length, 0),
-          totalFailed: Object.values(queueStats).reduce((sum: number, queue: any) => sum + queue.failed.length, 0),
+          totalWaiting: Object.values(queueStats).reduce((sum: number, queue) => sum + queue.waiting.length, 0),
+          totalActive: Object.values(queueStats).reduce((sum: number, queue) => sum + queue.active.length, 0),
+          totalCompleted: Object.values(queueStats).reduce((sum: number, queue) => sum + queue.completed.length, 0),
+          totalFailed: Object.values(queueStats).reduce((sum: number, queue) => sum + queue.failed.length, 0),
         };
       } catch (queueError) {
         console.error('Queue stats error:', queueError);
