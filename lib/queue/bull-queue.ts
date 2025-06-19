@@ -1,4 +1,6 @@
 import Queue from 'bull';
+import type { Queue as BullQueue } from 'bull';
+import { redisClient } from '../redis';
 
 // Queue names
 export const QUEUE_NAMES = {
@@ -39,124 +41,243 @@ function parseRedisUrl() {
 
 const redisConfig = parseRedisUrl();
 
-// Create queues
-export const openaiChatQueue = new Queue(QUEUE_NAMES.OPENAI_CHAT, {
-  redis: redisConfig,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-    removeOnComplete: 100,
-    removeOnFail: 50,
-  },
-});
+// Queue instances (lazy initialization)
+let _openaiChatQueue: BullQueue | null = null;
+let _audioProcessingQueue: BullQueue | null = null;
+let _largeRequestsQueue: BullQueue | null = null;
+let _analyticsQueue: BullQueue | null = null;
 
-export const audioProcessingQueue = new Queue(QUEUE_NAMES.AUDIO_PROCESSING, {
-  redis: redisConfig,
-  defaultJobOptions: {
-    attempts: 2,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: 50,
-    removeOnFail: 25,
-  },
-});
+// Check if Redis is ready before creating queues
+async function ensureRedisConnection(): Promise<boolean> {
+  try {
+    if (!redisClient.isReady) {
+      console.log('🔄 Redis not ready, attempting to connect...');
+      await redisClient.connect();
+    }
+    
+    // Test connection
+    await redisClient.ping();
+    return true;
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error);
+    return false;
+  }
+}
 
-export const largeRequestsQueue = new Queue(QUEUE_NAMES.LARGE_REQUESTS, {
-  redis: redisConfig,
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential',
-      delay: 10000,
-    },
-    removeOnComplete: 20,
-    removeOnFail: 10,
-  },
-  limiter: {
-    max: 2, // Max 2 large requests at a time
-    duration: 60000, // Per minute
-  },
-});
+// Queue factory function with error handling
+async function createQueue(name: string, options: any = {}): Promise<BullQueue> {
+  try {
+    // Ensure Redis is connected before creating queue
+    const isConnected = await ensureRedisConnection();
+    if (!isConnected) {
+      throw new Error('Redis connection not available');
+    }
 
-export const analyticsQueue = new Queue(QUEUE_NAMES.ANALYTICS, {
-  redis: redisConfig,
-  defaultJobOptions: {
-    attempts: 1,
-    removeOnComplete: 1000,
-    removeOnFail: 500,
-  },
-});
+    const queue = new Queue(name, {
+      redis: redisConfig,
+      ...options,
+    });
 
-// Queue event handlers
-openaiChatQueue.on('error', (error) => {
-  console.error('❌ OpenAI Chat Queue error:', error);
-});
+    // Add error handling
+    queue.on('error', (error) => {
+      console.error(`❌ ${name} Queue error:`, error);
+    });
 
-openaiChatQueue.on('waiting', (jobId) => {
-  console.log(`⏳ Job ${jobId} is waiting`);
-});
+    queue.on('waiting', (jobId) => {
+      console.log(`⏳ ${name} Job ${jobId} is waiting`);
+    });
 
-openaiChatQueue.on('active', (job) => {
-  console.log(`🔄 Job ${job.id} has started processing`);
-});
+    queue.on('active', (job) => {
+      console.log(`🔄 ${name} Job ${job.id} has started processing`);
+    });
 
-openaiChatQueue.on('completed', (job) => {
-  console.log(`✅ Job ${job.id} has completed`);
-});
+    queue.on('completed', (job) => {
+      console.log(`✅ ${name} Job ${job.id} has completed`);
+    });
 
-openaiChatQueue.on('failed', (job, err) => {
-  console.error(`❌ Job ${job.id} has failed:`, err);
-});
+    queue.on('failed', (job, err) => {
+      console.error(`❌ ${name} Job ${job.id} has failed:`, err);
+    });
 
-// Backpressure handling
-openaiChatQueue.on('stalled', (jobId) => {
-  console.warn(`⚠️ Job ${jobId} has stalled`);
-});
+    queue.on('stalled', (jobId) => {
+      console.warn(`⚠️ ${name} Job ${jobId} has stalled`);
+    });
 
-// Queue monitoring
+    return queue;
+  } catch (error) {
+    console.error(`❌ Failed to create ${name} queue:`, error);
+    throw error;
+  }
+}
+
+// Lazy getter functions with async initialization
+export async function getOpenaiChatQueue(): Promise<BullQueue> {
+  if (!_openaiChatQueue) {
+    _openaiChatQueue = await createQueue(QUEUE_NAMES.OPENAI_CHAT, {
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
+    });
+  }
+  return _openaiChatQueue;
+}
+
+export async function getAudioProcessingQueue(): Promise<BullQueue> {
+  if (!_audioProcessingQueue) {
+    _audioProcessingQueue = await createQueue(QUEUE_NAMES.AUDIO_PROCESSING, {
+      defaultJobOptions: {
+        attempts: 2,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: 50,
+        removeOnFail: 25,
+      },
+    });
+  }
+  return _audioProcessingQueue;
+}
+
+export async function getLargeRequestsQueue(): Promise<BullQueue> {
+  if (!_largeRequestsQueue) {
+    _largeRequestsQueue = await createQueue(QUEUE_NAMES.LARGE_REQUESTS, {
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 10000,
+        },
+        removeOnComplete: 20,
+        removeOnFail: 10,
+      },
+      limiter: {
+        max: 2, // Max 2 large requests at a time
+        duration: 60000, // Per minute
+      },
+    });
+  }
+  return _largeRequestsQueue;
+}
+
+export async function getAnalyticsQueue(): Promise<BullQueue> {
+  if (!_analyticsQueue) {
+    _analyticsQueue = await createQueue(QUEUE_NAMES.ANALYTICS, {
+      defaultJobOptions: {
+        attempts: 1,
+        removeOnComplete: 1000,
+        removeOnFail: 500,
+      },
+    });
+  }
+  return _analyticsQueue;
+}
+
+// Legacy exports for backward compatibility (these will be deprecated)
+let _legacyOpenaiChatQueue: BullQueue | null = null;
+let _legacyAudioProcessingQueue: BullQueue | null = null;
+let _legacyLargeRequestsQueue: BullQueue | null = null;
+let _legacyAnalyticsQueue: BullQueue | null = null;
+
+export const openaiChatQueue = (async () => {
+  if (!_legacyOpenaiChatQueue) {
+    _legacyOpenaiChatQueue = await getOpenaiChatQueue();
+  }
+  return _legacyOpenaiChatQueue;
+})();
+
+export const audioProcessingQueue = (async () => {
+  if (!_legacyAudioProcessingQueue) {
+    _legacyAudioProcessingQueue = await getAudioProcessingQueue();
+  }
+  return _legacyAudioProcessingQueue;
+})();
+
+export const largeRequestsQueue = (async () => {
+  if (!_legacyLargeRequestsQueue) {
+    _legacyLargeRequestsQueue = await getLargeRequestsQueue();
+  }
+  return _legacyLargeRequestsQueue;
+})();
+
+export const analyticsQueue = (async () => {
+  if (!_legacyAnalyticsQueue) {
+    _legacyAnalyticsQueue = await getAnalyticsQueue();
+  }
+  return _legacyAnalyticsQueue;
+})();
+
+// Queue monitoring with error handling
 export async function getQueueStats() {
-  const stats = {
-    openaiChat: {
-      waiting: await openaiChatQueue.getWaiting(),
-      active: await openaiChatQueue.getActive(),
-      completed: await openaiChatQueue.getCompleted(),
-      failed: await openaiChatQueue.getFailed(),
-    },
-    audioProcessing: {
-      waiting: await audioProcessingQueue.getWaiting(),
-      active: await audioProcessingQueue.getActive(),
-      completed: await audioProcessingQueue.getCompleted(),
-      failed: await audioProcessingQueue.getFailed(),
-    },
-    largeRequests: {
-      waiting: await largeRequestsQueue.getWaiting(),
-      active: await largeRequestsQueue.getActive(),
-      completed: await largeRequestsQueue.getCompleted(),
-      failed: await largeRequestsQueue.getFailed(),
-    },
-    analytics: {
-      waiting: await analyticsQueue.getWaiting(),
-      active: await analyticsQueue.getActive(),
-      completed: await analyticsQueue.getCompleted(),
-      failed: await analyticsQueue.getFailed(),
-    },
-  };
+  try {
+    const stats = {
+      openaiChat: {
+        waiting: await (await getOpenaiChatQueue()).getWaiting(),
+        active: await (await getOpenaiChatQueue()).getActive(),
+        completed: await (await getOpenaiChatQueue()).getCompleted(),
+        failed: await (await getOpenaiChatQueue()).getFailed(),
+      },
+      audioProcessing: {
+        waiting: await (await getAudioProcessingQueue()).getWaiting(),
+        active: await (await getAudioProcessingQueue()).getActive(),
+        completed: await (await getAudioProcessingQueue()).getCompleted(),
+        failed: await (await getAudioProcessingQueue()).getFailed(),
+      },
+      largeRequests: {
+        waiting: await (await getLargeRequestsQueue()).getWaiting(),
+        active: await (await getLargeRequestsQueue()).getActive(),
+        completed: await (await getLargeRequestsQueue()).getCompleted(),
+        failed: await (await getLargeRequestsQueue()).getFailed(),
+      },
+      analytics: {
+        waiting: await (await getAnalyticsQueue()).getWaiting(),
+        active: await (await getAnalyticsQueue()).getActive(),
+        completed: await (await getAnalyticsQueue()).getCompleted(),
+        failed: await (await getAnalyticsQueue()).getFailed(),
+      },
+    };
 
-  return stats;
+    return stats;
+  } catch (error) {
+    console.error('❌ Error getting queue stats:', error);
+    // Return empty stats if queues are not available
+    return {
+      openaiChat: { waiting: [], active: [], completed: [], failed: [] },
+      audioProcessing: { waiting: [], active: [], completed: [], failed: [] },
+      largeRequests: { waiting: [], active: [], completed: [], failed: [] },
+      analytics: { waiting: [], active: [], completed: [], failed: [] },
+    };
+  }
 }
 
 // Graceful shutdown
 export async function closeQueues() {
-  await openaiChatQueue.close();
-  await audioProcessingQueue.close();
-  await largeRequestsQueue.close();
-  await analyticsQueue.close();
-  console.log('✅ All queues closed');
+  try {
+    const queues = [
+      _openaiChatQueue,
+      _audioProcessingQueue,
+      _largeRequestsQueue,
+      _analyticsQueue,
+    ].filter(Boolean);
+
+    await Promise.all(queues.map(queue => queue?.close()));
+    
+    // Reset queue instances
+    _openaiChatQueue = null;
+    _audioProcessingQueue = null;
+    _largeRequestsQueue = null;
+    _analyticsQueue = null;
+    
+    console.log('✅ All queues closed');
+  } catch (error) {
+    console.error('❌ Error closing queues:', error);
+  }
 }
 
 // Log Redis configuration

@@ -13,14 +13,17 @@ export function useScrollToBottom(): [
 
     if (container && end) {
       const observer = new MutationObserver(() => {
-        end.scrollIntoView({ behavior: 'instant', block: 'end' });
+        // Add debouncing to prevent excessive scrolling
+        requestAnimationFrame(() => {
+          end.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
       });
 
       observer.observe(container, {
         childList: true,
         subtree: true,
-        attributes: true,
-        characterData: true,
+        attributes: false, // Only watch for DOM changes, not attribute changes
+        characterData: false, // Only watch for DOM changes, not text changes
       });
 
       return () => observer.disconnect();
