@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 export const runtime = 'nodejs';
@@ -10,7 +9,13 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Simple JWT-like token generation (in production, use a proper JWT library)
-function generateToken(payload: any): string {
+interface JWTPayload {
+  username: string;
+  role: string;
+  exp: number;
+}
+
+function generateToken(payload: JWTPayload): string {
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -90,6 +95,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ authenticated: true });
   } catch (error) {
+    console.error('Auth check error:', error);
     return NextResponse.json({ authenticated: false });
   }
 } 
