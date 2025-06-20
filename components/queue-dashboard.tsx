@@ -106,24 +106,6 @@ export function QueueDashboard() {
     }
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/admin/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        window.location.href = '/admin/login';
-      } else {
-        toast.error('Logout failed');
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-      toast.error('Logout failed');
-    }
-  };
-
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
