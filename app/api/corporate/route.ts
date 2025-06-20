@@ -52,10 +52,18 @@ export async function POST(request: NextRequest) {
     const threadMessages = await openai.beta.threads.messages.list(threadId);
     const lastMessage = threadMessages.data[0];
 
-    return NextResponse.json({
-      message: lastMessage.content[0].type === 'text' ? lastMessage.content[0].text.value : 'No text response',
-      threadId,
-    });
+    const responseText = lastMessage.content[0].type === 'text' ? lastMessage.content[0].text.value : 'No text response';
+
+    // Return in the format expected by useChat
+    return new Response(
+      `0:"${responseText.replace(/"/g, '\\"')}"\n`,
+      {
+        headers: {
+          'Content-Type': 'text/plain',
+          'X-Thread-Id': threadId,
+        },
+      }
+    );
 
   } catch (error) {
     console.error('Error in API:', error);
