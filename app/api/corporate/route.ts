@@ -54,9 +54,17 @@ export async function POST(request: NextRequest) {
 
     const responseText = lastMessage.content[0].type === 'text' ? lastMessage.content[0].text.value : 'No text response';
 
+    // Properly escape the response text for the streaming format
+    const escapedResponse = responseText
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\t/g, '\\t');
+
     // Return in the format expected by useChat
     return new Response(
-      `0:"${responseText.replace(/"/g, '\\"')}"\n`,
+      `0:"${escapedResponse}"\n`,
       {
         headers: {
           'Content-Type': 'text/plain',
