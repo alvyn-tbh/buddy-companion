@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Volume2, VolumeX, Settings } from "lucide-react";
@@ -30,7 +30,7 @@ export function AudioSettings({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const handleClickOutside = (event: MouseEvent) => {
+  const handleClickOutside = useCallback((event: MouseEvent) => {
     // Don't close if Select is open
     if (isSelectOpen) {
       console.log('Select is open, not closing dropdown');
@@ -46,7 +46,7 @@ export function AudioSettings({
       console.log('Closing dropdown due to click outside');
       setShowSettings(false);
     }
-  };
+  }, [isSelectOpen]);
 
   useEffect(() => {
     if (!isSelectOpen) {
@@ -55,7 +55,7 @@ export function AudioSettings({
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [isSelectOpen]);
+  }, [isSelectOpen, handleClickOutside]);
 
   const handleAudioToggle = () => {
     onAudioToggle(!isAudioEnabled);

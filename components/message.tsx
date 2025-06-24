@@ -162,13 +162,17 @@ const PurePreviewMessage = ({
 
   // Auto-play audio for the latest completed assistant message
   useEffect(() => {
+    // Only auto-play for simple messages without parts, since AudioPlayer handles individual parts
+    const hasTextParts = message.parts && message.parts.some(part => part.type === "text");
+    
     if (
       message.role === "assistant" &&
       isLatestMessage &&
       isAudioEnabled &&
       status === "ready" &&
       messageText.trim() &&
-      autoPlay
+      autoPlay &&
+      !hasTextParts // Don't auto-play if message has individual text parts
     ) {
       // Add a longer delay and check if user is still on the page
       const timer = setTimeout(async () => {
@@ -215,7 +219,7 @@ const PurePreviewMessage = ({
 
       return () => clearTimeout(timer);
     }
-  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText, voice, speed, autoPlay, model]);
+  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText, voice, speed, autoPlay, model, message.parts]);
 
   return (
     <AnimatePresence key={message.id}>

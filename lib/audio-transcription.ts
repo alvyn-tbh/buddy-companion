@@ -21,6 +21,20 @@ export interface TranscriptionOptions {
   temperature?: number;
 }
 
+interface VerboseTranscriptionResponse {
+  text: string;
+  language: string;
+  duration: number;
+  segments: Array<{
+    avg_logprob: number;
+    [key: string]: unknown;
+  }>;
+}
+
+interface JsonTranscriptionResponse {
+  text: string;
+}
+
 /**
  * Transcribe audio using OpenAI's Whisper API
  * @param audioBuffer - The audio data as a Buffer
@@ -41,8 +55,11 @@ export async function transcribeAudio(
 
     console.log('Starting audio transcription with OpenAI Whisper API...');
 
+    // Create a File object from the buffer for the OpenAI API
+    const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+
     const transcription = await openai.audio.transcriptions.create({
-      file: audioBuffer,
+      file: audioFile,
       model: 'whisper-1',
       language,
       prompt,
@@ -52,7 +69,7 @@ export async function transcribeAudio(
 
     // Handle different response formats
     if (responseFormat === 'verbose_json') {
-      const verboseResult = transcription as any;
+      const verboseResult = transcription as unknown as VerboseTranscriptionResponse;
       return {
         transcription: verboseResult.text,
         confidence: verboseResult.segments?.[0]?.avg_logprob || 0,
@@ -61,7 +78,7 @@ export async function transcribeAudio(
         requestId: generateRequestId(),
       };
     } else if (responseFormat === 'json') {
-      const jsonResult = transcription as any;
+      const jsonResult = transcription as unknown as JsonTranscriptionResponse;
       return {
         transcription: jsonResult.text,
         requestId: generateRequestId(),
@@ -69,7 +86,7 @@ export async function transcribeAudio(
     } else {
       // For text, srt, vtt formats
       return {
-        transcription: transcription as string,
+        transcription: transcription as unknown as string,
         requestId: generateRequestId(),
       };
     }
@@ -123,6 +140,7 @@ export async function audioBlobToBuffer(audioBlob: Blob): Promise<Buffer> {
         const buffer = Buffer.from(arrayBuffer);
         resolve(buffer);
       } catch (error) {
+        console.error('Failed to convert audio blob to buffer:', error);
         reject(new Error('Failed to convert audio blob to buffer'));
       }
     };

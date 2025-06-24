@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Chat from "@/components/chat";
 import { trackPageView } from "@/lib/analytics";
 
@@ -13,7 +13,7 @@ const CORPORATE_TTS_CONFIG = {
 };
 
 export default function Page() {
-  const [ttsConfig, setTtsConfig] = useState(CORPORATE_TTS_CONFIG);
+  const ttsConfig = CORPORATE_TTS_CONFIG;
 
   useEffect(() => {
     // Track page view for analytics

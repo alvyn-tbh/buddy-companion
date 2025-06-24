@@ -1,144 +1,130 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { transcribeAudio, audioBlobToBuffer, validateAudioInput } from '../../../lib/audio-transcription';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+interface VerboseTranscriptionResponse {
+  text: string;
+  language: string;
+  duration: number;
+  segments: Array<{
+    avg_logprob: number;
+    [key: string]: unknown;
+  }>;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenAI API key is configured
+    // Check if API key is configured
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OpenAI API key is not configured');
       return NextResponse.json(
-        { 
-          error: 'OpenAI API key is not configured',
-          details: 'Please set the OPENAI_API_KEY environment variable'
-        },
+        { error: 'OpenAI API key is not configured', details: 'Please set OPENAI_API_KEY environment variable' },
         { status: 500 }
       );
     }
 
-    // Parse the form data
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
     const language = formData.get('language') as string || 'en';
-    const prompt = formData.get('prompt') as string;
     const responseFormat = formData.get('responseFormat') as string || 'verbose_json';
 
-    // Validate audio file
     if (!audioFile) {
       return NextResponse.json(
-        { error: 'No audio file provided' },
+        { error: 'No audio file provided', details: 'Please provide an audio file in the request' },
         { status: 400 }
       );
     }
 
-    console.log('Audio file received:', {
-      name: audioFile.name,
-      size: audioFile.size,
-      type: audioFile.type
-    });
-
-    // Check file size (25MB limit for OpenAI Whisper)
+    // Validate file size (25MB limit for OpenAI Whisper)
     const maxSize = 25 * 1024 * 1024; // 25MB
     if (audioFile.size > maxSize) {
       return NextResponse.json(
-        { 
-          error: 'Audio file is too large. Maximum size is 25MB',
-          details: `File size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB`
-        },
+        { error: 'File too large', details: `File size must be less than 25MB. Current size: ${(audioFile.size / 1024 / 1024).toFixed(2)}MB` },
         { status: 400 }
       );
     }
 
-    // Check if file size is too small (likely empty or corrupted)
-    if (audioFile.size === 0) {
+    // Validate file type
+    const allowedTypes = ['audio/mp3', 'audio/mp4', 'audio/mpeg', 'audio/mpga', 'audio/m4a', 'audio/wav', 'audio/webm'];
+    if (!allowedTypes.includes(audioFile.type)) {
       return NextResponse.json(
-        { error: 'Audio file is empty or corrupted' },
+        { error: 'Invalid file type', details: `Supported formats: ${allowedTypes.join(', ')}` },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const audioBuffer = Buffer.from(arrayBuffer);
-
-    console.log('Audio buffer created:', {
-      bufferSize: audioBuffer.length,
-      isValid: audioBuffer.length > 0
-    });
-
-    // Validate audio input
-    try {
-      validateAudioInput(audioBuffer);
-    } catch (validationError) {
-      console.error('Audio validation failed:', validationError);
-      return NextResponse.json(
-        { 
-          error: 'Audio validation failed',
-          details: validationError instanceof Error ? validationError.message : 'Unknown validation error'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Transcribe audio
-    console.log('Starting transcription with options:', {
+    console.log('Starting transcription with OpenAI Whisper...', {
+      fileName: audioFile.name,
+      fileSize: audioFile.size,
+      fileType: audioFile.type,
       language,
-      prompt: prompt ? 'provided' : 'not provided',
       responseFormat
     });
 
-    const result = await transcribeAudio(audioBuffer, {
-      language,
-      prompt,
-      responseFormat: responseFormat as any,
+    // Convert File to Buffer for OpenAI API
+    const arrayBuffer = await audioFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Call OpenAI Whisper API
+    const transcription = await openai.audio.transcriptions.create({
+      file: new File([buffer], audioFile.name, { type: audioFile.type }),
+      model: 'whisper-1',
+      language: language,
+      response_format: responseFormat as 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt',
+      temperature: 0.2, // Lower temperature for more accurate transcription
     });
 
-    console.log('Transcription completed successfully:', {
-      transcriptionLength: result.transcription.length,
-      confidence: result.confidence,
-      language: result.language,
-      duration: result.duration
-    });
+    console.log('Transcription completed successfully');
 
-    return NextResponse.json({
-      success: true,
-      transcription: result.transcription,
-      confidence: result.confidence,
-      language: result.language,
-      duration: result.duration,
-      requestId: result.requestId,
-    });
+    // Return the transcription result
+    if (responseFormat === 'verbose_json') {
+      // For verbose_json, the response includes additional metadata
+      const verboseResponse = transcription as VerboseTranscriptionResponse;
+      return NextResponse.json({
+        transcription: verboseResponse.text,
+        language: verboseResponse.language,
+        duration: verboseResponse.duration,
+        segments: verboseResponse.segments
+      });
+    } else {
+      return NextResponse.json({
+        transcription: transcription.text
+      });
+    }
 
   } catch (error) {
-    console.error('Transcription API error:', error);
+    console.error('Transcription error:', error);
     
-    // Provide more specific error messages
-    let errorMessage = 'Transcription failed';
-    let errorDetails = 'Unknown error';
-    
+    // Handle specific OpenAI errors
     if (error instanceof Error) {
-      errorDetails = error.message;
-      
-      // Check for specific OpenAI API errors
-      if (error.message.includes('invalid_request_error')) {
-        errorMessage = 'Invalid request to OpenAI API';
-        errorDetails = 'The audio file format or content may not be supported';
-      } else if (error.message.includes('authentication_error')) {
-        errorMessage = 'OpenAI API authentication failed';
-        errorDetails = 'Please check your API key configuration';
-      } else if (error.message.includes('rate_limit_exceeded')) {
-        errorMessage = 'OpenAI API rate limit exceeded';
-        errorDetails = 'Please try again later';
-      } else if (error.message.includes('quota_exceeded')) {
-        errorMessage = 'OpenAI API quota exceeded';
-        errorDetails = 'Please check your OpenAI account usage';
+      if (error.message.includes('authentication')) {
+        return NextResponse.json(
+          { error: 'OpenAI API authentication failed', details: 'Please check your API key' },
+          { status: 401 }
+        );
+      } else if (error.message.includes('rate limit')) {
+        return NextResponse.json(
+          { error: 'OpenAI API rate limit exceeded', details: 'Please try again later' },
+          { status: 429 }
+        );
+      } else if (error.message.includes('quota')) {
+        return NextResponse.json(
+          { error: 'OpenAI API quota exceeded', details: 'Please check your account usage' },
+          { status: 402 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'Transcription failed', details: error.message },
+          { status: 500 }
+        );
       }
     }
     
     return NextResponse.json(
-      { 
-        error: errorMessage,
-        details: errorDetails
-      },
+      { error: 'Transcription failed', details: 'An unexpected error occurred' },
       { status: 500 }
     );
   }
