@@ -10,10 +10,9 @@ interface UseAudioReturn {
   toggleAudio: () => void;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
-  playText: (text: string) => void;
+  playText: (text: string, voice?: string) => Promise<void>;
   stopPlaying: () => void;
   isSpeechRecognitionSupported: boolean;
-  isSpeechSynthesisSupported: boolean;
 }
 
 export function useAudio(): UseAudioReturn {
@@ -21,20 +20,20 @@ export function useAudio(): UseAudioReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
-  // Check browser support
+  // Check if speech recognition is supported (for transcription)
   const isSpeechRecognitionSupported = typeof window !== 'undefined' && 
     ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
-  
-  const isSpeechSynthesisSupported = typeof window !== 'undefined' && 
-    'speechSynthesis' in window;
 
   const stopPlaying = useCallback(() => {
-    if (isSpeechSynthesisSupported) {
-      window.speechSynthesis.cancel();
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      setCurrentAudio(null);
     }
     setIsPlaying(false);
-  }, [isSpeechSynthesisSupported]);
+  }, [currentAudio]);
 
   const enableAudio = useCallback(() => {
     setIsAudioEnabled(true);
@@ -61,47 +60,74 @@ export function useAudio(): UseAudioReturn {
     setIsTranscribing(false);
   }, []);
 
-  const playText = useCallback((text: string) => {
-    if (!isAudioEnabled || !isSpeechSynthesisSupported || !text.trim()) {
+  const playText = useCallback(async (text: string, voice: string = 'alloy') => {
+    if (!isAudioEnabled || !text.trim()) {
       return;
     }
 
     try {
-      // Cancel any existing speech
-      window.speechSynthesis.cancel();
+      // Stop any currently playing audio
+      stopPlaying();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
-      utterance.lang = 'en-US';
+      setIsPlaying(true);
 
-      utterance.onstart = () => {
-        setIsPlaying(true);
-      };
+      // Call OpenAI TTS API
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voice,
+          model: 'tts-1',
+          speed: 1.0,
+          format: 'mp3'
+        }),
+      });
 
-      utterance.onend = () => {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'TTS failed');
+      }
+
+      // Get the audio data as a blob
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Create and play audio
+      const audio = new Audio(audioUrl);
+      setCurrentAudio(audio);
+
+      audio.onended = () => {
         setIsPlaying(false);
+        setCurrentAudio(null);
+        // Clean up the blob URL
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utterance.onerror = () => {
+      audio.onerror = () => {
         setIsPlaying(false);
+        setCurrentAudio(null);
+        // Clean up the blob URL
+        URL.revokeObjectURL(audioUrl);
       };
 
-      window.speechSynthesis.speak(utterance);
+      await audio.play();
+
     } catch (error) {
-      console.error('Error with speech synthesis:', error);
+      console.error('Error with TTS:', error);
+      setIsPlaying(false);
+      setCurrentAudio(null);
     }
-  }, [isAudioEnabled, isSpeechSynthesisSupported]);
+  }, [isAudioEnabled, stopPlaying]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (isSpeechSynthesisSupported) {
-        window.speechSynthesis.cancel();
-      }
+      stopPlaying();
     };
-  }, [isSpeechSynthesisSupported]);
+  }, [stopPlaying]);
 
   return {
     isAudioEnabled,
@@ -116,6 +142,5 @@ export function useAudio(): UseAudioReturn {
     playText,
     stopPlaying,
     isSpeechRecognitionSupported,
-    isSpeechSynthesisSupported,
   };
 } 

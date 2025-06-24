@@ -8,6 +8,7 @@ import {
 } from './bull-queue';
 import { initRedis, closeRedis } from '../redis';
 import { responseCache, generateCacheKey } from '../cache';
+import { transcribeAudio, base64ToBuffer, validateAudioInput } from '../audio-transcription';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -116,20 +117,19 @@ async function initializeQueueProcessors() {
 
     // Process audio transcription
     audioProcessingQueue.process(JOB_TYPES.AUDIO_TRANSCRIPTION, async (job) => {
-      const { requestId } = job.data;
+      const { audioBuffer: base64Audio, options, requestId } = job.data;
       
       console.log(`Processing audio transcription ${requestId}`);
       
       try {
-        // Here you would implement audio transcription logic
-        // For now, we'll simulate processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Convert base64 back to buffer
+        const audioBuffer = base64ToBuffer(base64Audio);
         
-        const result = {
-          transcription: "Simulated audio transcription result",
-          confidence: 0.95,
-          requestId,
-        };
+        // Validate audio input
+        validateAudioInput(audioBuffer);
+        
+        // Transcribe using OpenAI Whisper API
+        const result = await transcribeAudio(audioBuffer, options);
 
         console.log(`Audio transcription ${requestId} completed successfully`);
         return result;
