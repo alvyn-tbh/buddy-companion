@@ -9,19 +9,24 @@ interface AudioPlayerProps {
   text: string;
   isEnabled: boolean;
   className?: string;
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  ttsModel?: 'tts-1' | 'tts-1-hd';
 }
 
-export function AudioPlayer({ text, isEnabled, className = "" }: AudioPlayerProps) {
+export function AudioPlayer({ 
+  text, 
+  isEnabled, 
+  className = "", 
+  voice = 'alloy',
+  ttsModel = 'tts-1'
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const isProcessingRef = useRef(false);
 
-  // Check if speech synthesis is supported
-  const isSpeechSynthesisSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
-
-  const speak = useCallback((text: string) => {
-    if (!isEnabled || !text.trim() || isProcessingRef.current || !isSpeechSynthesisSupported) {
+  const speak = useCallback(async (text: string) => {
+    if (!isEnabled || !text.trim() || isProcessingRef.current) {
       return;
     }
 
@@ -29,71 +34,117 @@ export function AudioPlayer({ text, isEnabled, className = "" }: AudioPlayerProp
       isProcessingRef.current = true;
       setIsLoading(true);
 
-      // Cancel any existing speech
-      window.speechSynthesis.cancel();
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
 
-      // Create new utterance with optimized settings
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9; // Slightly slower for better comprehension
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
-      utterance.lang = 'en-US';
+      // Call OpenAI TTS API directly from client
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voice,
+          model: ttsModel,
+          speed: 1.0,
+          format: 'mp3'
+        }),
+      });
 
-      // Set up event handlers
-      utterance.onstart = () => {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'TTS failed');
+      }
+
+      // Get the audio data as a blob
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Create audio element and play
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onloadstart = () => {
+        setIsLoading(true);
+      };
+
+      audio.oncanplay = () => {
+        setIsLoading(false);
+        setIsPlaying(true);
+      };
+
+      audio.onplay = () => {
         setIsPlaying(true);
         setIsLoading(false);
       };
 
-      utterance.onend = () => {
+      audio.onpause = () => {
         setIsPlaying(false);
         setIsLoading(false);
         isProcessingRef.current = false;
-        utteranceRef.current = null;
       };
 
-      utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
+      audio.onended = () => {
         setIsPlaying(false);
         setIsLoading(false);
         isProcessingRef.current = false;
-        utteranceRef.current = null;
-        
-        // Provide specific error messages
-        if (event.error === 'canceled') {
-          toast.error("Audio playback was canceled");
-        } else if (event.error === 'interrupted') {
-          toast.error("Audio playback was interrupted");
-        } else if (event.error === 'audio-busy') {
-          toast.error("Audio system is busy. Please try again.");
-        } else if (event.error === 'audio-hardware') {
-          toast.error("Audio hardware error. Please check your speakers.");
-        } else {
-          toast.error("Error playing audio. Please try again.");
-        }
+        audioRef.current = null;
+        // Clean up the blob URL
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      audio.onerror = (event) => {
+        console.error('Audio playback error:', event);
+        setIsPlaying(false);
+        setIsLoading(false);
+        isProcessingRef.current = false;
+        audioRef.current = null;
+        // Clean up the blob URL
+        URL.revokeObjectURL(audioUrl);
+        toast.error("Error playing audio. Please try again.");
+      };
+
+      await audio.play();
+
     } catch (error) {
-      console.error('Error with speech synthesis:', error);
+      console.error('TTS error:', error);
       setIsPlaying(false);
       setIsLoading(false);
       isProcessingRef.current = false;
-      utteranceRef.current = null;
-      toast.error("Audio playback not supported in this browser");
+      audioRef.current = null;
+      
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('API key is not configured')) {
+          toast.error("OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.");
+        } else if (error.message.includes('authentication failed')) {
+          toast.error("OpenAI API authentication failed. Please check your API key.");
+        } else if (error.message.includes('rate limit exceeded')) {
+          toast.error("OpenAI API rate limit exceeded. Please try again later.");
+        } else if (error.message.includes('quota exceeded')) {
+          toast.error("OpenAI API quota exceeded. Please check your account usage.");
+        } else {
+          toast.error(`Error playing audio: ${error.message}`);
+        }
+      } else {
+        toast.error("Error playing audio. Please try again.");
+      }
     }
-  }, [isEnabled, isSpeechSynthesisSupported]);
+  }, [isEnabled, voice, ttsModel]);
 
   const stopSpeaking = useCallback(() => {
-    if (isSpeechSynthesisSupported) {
-      window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
     }
     setIsPlaying(false);
     setIsLoading(false);
     isProcessingRef.current = false;
-    utteranceRef.current = null;
-  }, [isSpeechSynthesisSupported]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -123,8 +174,8 @@ export function AudioPlayer({ text, isEnabled, className = "" }: AudioPlayerProp
     };
   }, [isPlaying, stopSpeaking]);
 
-  // Prevent rendering if no text or not supported
-  if (!text.trim() || !isSpeechSynthesisSupported) return null;
+  // Prevent rendering if no text
+  if (!text.trim()) return null;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

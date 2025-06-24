@@ -125,12 +125,22 @@ const PurePreviewMessage = ({
   isLatestMessage,
   status,
   isAudioEnabled,
+  ttsConfig,
+  ttsModel,
+  voice: selectedVoice,
 }: {
   message: TMessage;
   isLoading: boolean;
   status: "error" | "submitted" | "streaming" | "ready";
   isLatestMessage: boolean;
   isAudioEnabled: boolean;
+  ttsConfig?: {
+    defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+    speed: number;
+    autoPlay: boolean;
+  };
+  ttsModel?: 'tts-1' | 'tts-1-hd';
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 }) => {
   // Extract text content from message parts for audio playback
   const getMessageText = () => {
@@ -144,6 +154,12 @@ const PurePreviewMessage = ({
 
   const messageText = getMessageText();
 
+  // Use corporate TTS config if provided, otherwise use defaults
+  const voice = selectedVoice || ttsConfig?.defaultVoice || 'alloy';
+  const speed = ttsConfig?.speed || 1.0;
+  const autoPlay = ttsConfig?.autoPlay ?? true;
+  const model = ttsModel || 'tts-1';
+
   // Auto-play audio for the latest completed assistant message
   useEffect(() => {
     if (
@@ -151,19 +167,46 @@ const PurePreviewMessage = ({
       isLatestMessage &&
       isAudioEnabled &&
       status === "ready" &&
-      messageText.trim()
+      messageText.trim() &&
+      autoPlay
     ) {
       // Add a longer delay and check if user is still on the page
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         if (!document.hidden) { // Only auto-play if tab is active
           try {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(messageText);
-            utterance.rate = 0.9;
-            utterance.pitch = 1;
-            utterance.volume = 0.8;
-            utterance.lang = 'en-US';
-            window.speechSynthesis.speak(utterance);
+            // Call OpenAI TTS API for auto-play
+            const response = await fetch('/api/tts', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                text: messageText,
+                voice: voice,
+                model: model,
+                speed: speed,
+                format: 'mp3'
+              }),
+            });
+
+            if (response.ok) {
+              // Get the audio data as a blob
+              const audioBlob = await response.blob();
+              const audioUrl = URL.createObjectURL(audioBlob);
+              const audio = new Audio(audioUrl);
+              
+              audio.onended = () => {
+                // Clean up the blob URL
+                URL.revokeObjectURL(audioUrl);
+              };
+              
+              audio.onerror = () => {
+                // Clean up the blob URL
+                URL.revokeObjectURL(audioUrl);
+              };
+              
+              await audio.play();
+            }
           } catch (error) {
             console.error('Auto-play audio error:', error);
           }
@@ -172,7 +215,7 @@ const PurePreviewMessage = ({
 
       return () => clearTimeout(timer);
     }
-  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText]);
+  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText, voice, speed, autoPlay, model]);
 
   return (
     <AnimatePresence key={message.id}>
@@ -220,6 +263,8 @@ const PurePreviewMessage = ({
                           <AudioPlayer 
                             text={part.text} 
                             isEnabled={isAudioEnabled}
+                            voice={voice}
+                            ttsModel={model}
                             className="mt-2"
                           />
                         )}

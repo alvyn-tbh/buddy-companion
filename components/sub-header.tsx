@@ -10,7 +10,11 @@ export default function Header(props: {
   features_url: string, 
   how_it_works_url: string,
   isAudioEnabled?: boolean,
-  onAudioToggle?: (enabled: boolean) => void
+  onAudioToggle?: (enabled: boolean) => void,
+  ttsModel?: 'tts-1' | 'tts-1-hd',
+  onTTSModelChange?: (model: 'tts-1' | 'tts-1-hd') => void,
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
+  onVoiceChange?: (voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') => void
 }) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -76,6 +80,10 @@ export default function Header(props: {
                 <AudioSettings 
                   isAudioEnabled={props.isAudioEnabled} 
                   onAudioToggle={props.onAudioToggle}
+                  ttsModel={props.ttsModel}
+                  onTTSModelChange={props.onTTSModelChange}
+                  voice={props.voice}
+                  onVoiceChange={props.onVoiceChange}
                 />
               )}
               

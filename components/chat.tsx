@@ -15,9 +15,41 @@ import { SuggestedPrompts } from "./suggested-prompts";
 //   content: string;
 // }
 
-export default function Chat(props: { api: string, chat_url: string, features_url: string, how_it_works_url: string }) {
+export default function Chat(props: { 
+  api: string, 
+  chat_url: string, 
+  features_url: string, 
+  how_it_works_url: string,
+  ttsConfig?: {
+    defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+    speed: number;
+    autoPlay: boolean;
+    defaultModel?: 'tts-1' | 'tts-1-hd';
+  }
+}) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [ttsModel, setTTSModel] = useState<'tts-1' | 'tts-1-hd'>(props.ttsConfig?.defaultModel || 'tts-1');
+  const [voice, setVoice] = useState<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'>(props.ttsConfig?.defaultVoice || 'alloy');
+
+  // Debug TTS model changes
+  const handleTTSModelChange = (model: 'tts-1' | 'tts-1-hd') => {
+    console.log('Chat component: TTS model changing from', ttsModel, 'to', model);
+    setTTSModel(model);
+  };
+
+  // Debug voice changes
+  const handleVoiceChange = (newVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') => {
+    console.log('Chat component: Voice changing from', voice, 'to', newVoice);
+    setVoice(newVoice);
+  };
+
+  // Use corporate TTS config if provided, otherwise use defaults
+  const ttsConfig = props.ttsConfig || {
+    defaultVoice: 'alloy' as const,
+    speed: 1.0,
+    autoPlay: true
+  };
 
   const { messages, input, handleInputChange: chatHandleInputChange, handleSubmit, status, stop, setInput } =
     useChat({
@@ -76,6 +108,10 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
         how_it_works_url={props.how_it_works_url}
         isAudioEnabled={isAudioEnabled}
         onAudioToggle={setIsAudioEnabled}
+        ttsModel={ttsModel}
+        onTTSModelChange={handleTTSModelChange}
+        voice={voice}
+        onVoiceChange={handleVoiceChange}
       />
       {displayMessages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
@@ -85,7 +121,15 @@ export default function Chat(props: { api: string, chat_url: string, features_ur
           </div>
         </div>
       ) : (
-        <Messages messages={displayMessages} isLoading={isLoading} status={status} isAudioEnabled={isAudioEnabled} />
+        <Messages 
+          messages={displayMessages} 
+          isLoading={isLoading} 
+          status={status} 
+          isAudioEnabled={isAudioEnabled}
+          ttsConfig={ttsConfig}
+          ttsModel={ttsModel}
+          voice={voice}
+        />
       )}
       <form
         onSubmit={handleSubmit}

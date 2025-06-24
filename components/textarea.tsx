@@ -21,25 +21,15 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isProcessingRef = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const transcriptionBufferRef = useRef<string>('');
   const maxRecordingTime = 300000; // 5 minutes max recording time
   const silenceThreshold = 5000; // 5 seconds of silence
-
-  // Check if speech recognition is supported
-  const isSpeechRecognitionSupported = typeof window !== 'undefined' && 
-    ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
   // Cleanup function to prevent memory leaks
   const cleanupAudioResources = useCallback(() => {
     try {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
       if (mediaRecorderRef.current) {
         if (mediaRecorderRef.current.state !== 'inactive') {
           mediaRecorderRef.current.stop();
@@ -59,9 +49,35 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
     }
   }, []);
 
+  // Function to transcribe audio using OpenAI API
+  const transcribeAudioWithOpenAI = useCallback(async (audioBlob: Blob): Promise<string> => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('language', 'en');
+      formData.append('responseFormat', 'verbose_json');
+
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Transcription failed');
+      }
+
+      const result = await response.json();
+      return result.transcription || '';
+    } catch (error) {
+      console.error('Transcription error:', error);
+      throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
+
   const handleMicClick = useCallback(async () => {
     if (isRecording) {
-      // Stop recording - wait for final transcription
+      // Stop recording and transcribe
       setIsRecording(false);
       setIsTranscribing(true);
       
@@ -71,7 +87,7 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
         silenceTimerRef.current = null;
       }
       
-      // Stop media recorder first
+      // Stop media recorder
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
         mediaRecorderRef.current = null;
@@ -83,29 +99,32 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
         streamRef.current = null;
       }
       
-      // Stop speech recognition immediately
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-      
       // Process the recorded audio for transcription
-      setTimeout(() => {
-        try {
-          // Put the collected transcription in the textarea
-          if (transcriptionBufferRef.current.trim()) {
-            handleInputChange({ target: { value: transcriptionBufferRef.current.trim() } });
-          }
+      try {
+        // Combine all audio chunks into a single blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        if (audioBlob.size > 0) {
+          // Transcribe using OpenAI API
+          const transcription = await transcribeAudioWithOpenAI(audioBlob);
           
-          setIsTranscribing(false);
-          isProcessingRef.current = false;
-        } catch (error) {
-          console.error('Error processing audio:', error);
-          setIsTranscribing(false);
-          isProcessingRef.current = false;
-          toast.error("Error processing audio recording");
+          if (transcription.trim()) {
+            handleInputChange({ target: { value: transcription.trim() } });
+            toast.success("Transcription completed!");
+          } else {
+            toast.warning("No speech detected in the recording");
+          }
+        } else {
+          toast.error("No audio data recorded");
         }
-      }, 500);
+      } catch (error) {
+        console.error('Error processing audio:', error);
+        toast.error("Error transcribing audio recording");
+      } finally {
+        setIsTranscribing(false);
+        isProcessingRef.current = false;
+        audioChunksRef.current = [];
+      }
       
       return;
     }
@@ -122,7 +141,6 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
       
       streamRef.current = stream;
       audioChunksRef.current = [];
-      transcriptionBufferRef.current = ''; // Reset transcription buffer
       setRecordingStartTime(Date.now());
 
       // Start MediaRecorder
@@ -146,101 +164,13 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
       
-      // Start speech recognition for collecting transcription
-      if (isSpeechRecognitionSupported) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'en-US';
-        
-        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-          // Clear existing silence timer
-          if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-          }
-          
-          // Start new silence timer
-          silenceTimerRef.current = setTimeout(() => {
-            if (isRecording) {
-              toast.info("Stopping recording and sending message...");
-              // Stop recording first
-              setIsRecording(false);
-              setIsTranscribing(true);
-              
-              // Clear silence timer
-              if (silenceTimerRef.current) {
-                clearTimeout(silenceTimerRef.current);
-                silenceTimerRef.current = null;
-              }
-              
-              // Stop media recorder first
-              if (mediaRecorderRef.current) {
-                mediaRecorderRef.current.stop();
-                mediaRecorderRef.current = null;
-              }
-              
-              // Stop stream
-              if (streamRef.current) {
-                streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-                streamRef.current = null;
-              }
-              
-              // Stop speech recognition immediately
-              if (recognitionRef.current) {
-                recognitionRef.current.stop();
-                recognitionRef.current = null;
-              }
-              
-              // Process the recorded audio for transcription
-              setTimeout(() => {
-                try {
-                  // Put the collected transcription in the textarea
-                  if (transcriptionBufferRef.current.trim()) {
-                    handleInputChange({ target: { value: transcriptionBufferRef.current.trim() } });
-                  }
-                  
-                  setIsTranscribing(false);
-                  isProcessingRef.current = false;
-                  
-                  // Auto-submit the message
-                  if (transcriptionBufferRef.current.trim()) {
-                    const formEvent = {
-                      preventDefault: () => { },
-                    } as React.FormEvent<HTMLFormElement>;
-                    handleSubmit(formEvent);
-                  }
-                } catch (error) {
-                  console.error('Error processing audio:', error);
-                  setIsTranscribing(false);
-                  isProcessingRef.current = false;
-                  toast.error("Error processing audio recording");
-                }
-              }, 500);
-            }
-          }, silenceThreshold);
-          
-          // Collect transcription in buffer
-          let finalTranscript = '';
-          
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += transcript + ' ';
-            }
-          }
-          
-          // Update the transcription buffer
-          transcriptionBufferRef.current += finalTranscript;
-        };
-
-        recognitionRef.current.onerror = () => {
-          // Ignore errors, just stop
-          setIsRecording(false);
-        };
-
-        recognitionRef.current.start();
-      }
+      // Start silence detection timer
+      silenceTimerRef.current = setTimeout(() => {
+        if (isRecording) {
+          toast.info("Stopping recording due to silence...");
+          handleMicClick(); // Stop recording
+        }
+      }, silenceThreshold);
       
       toast.success("Recording started... Speak now!");
     } catch (error) {
@@ -248,7 +178,7 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
       toast.error("Could not access microphone");
       setIsRecording(false);
     }
-  }, [isRecording, isSpeechRecognitionSupported, handleInputChange, silenceThreshold, handleSubmit]);
+  }, [isRecording, handleInputChange, silenceThreshold, transcribeAudioWithOpenAI]);
 
   const toggleAudio = useCallback(() => {
     onAudioToggle(!isAudioEnabled);
@@ -381,7 +311,7 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
         <div className="absolute -top-8 left-0 right-0 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
-            Transcribing...
+            Transcribing with OpenAI...
           </div>
         </div>
       )}
