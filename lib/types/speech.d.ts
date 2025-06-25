@@ -1,3 +1,4 @@
+// Web Speech API TypeScript declarations
 // Web Speech API TypeScript definitions
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
