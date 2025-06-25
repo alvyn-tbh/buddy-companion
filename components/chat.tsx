@@ -113,6 +113,7 @@ export default function Chat(props: {
         voice={voice}
         onVoiceChange={handleVoiceChange}
       />
+
       {displayMessages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
           <ProjectOverview />
@@ -143,6 +144,7 @@ export default function Chat(props: {
           handleSubmit={handleSubmit}
           isAudioEnabled={isAudioEnabled}
           onAudioToggle={setIsAudioEnabled}
+          voice={voice}
         />
       </form>
     </div>

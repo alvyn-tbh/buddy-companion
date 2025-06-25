@@ -1,8 +1,9 @@
 import { Button } from "./ui/button";
 import { Textarea as TextareaComponent } from "./ui/textarea";
-import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, MessageCircle, MessageCircleOff } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { RealtimeWebRTC } from "../lib/realtime-webrtc";
 
 interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;
@@ -12,20 +13,108 @@ interface InputProps {
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isAudioEnabled: boolean;
   onAudioToggle: (enabled: boolean) => void;
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 }
 
-export function Textarea({ handleInputChange, input, isLoading, stop, handleSubmit, isAudioEnabled, onAudioToggle }: InputProps) {
+export function Textarea({ 
+  handleInputChange, 
+  input, 
+  isLoading, 
+  stop, 
+  handleSubmit, 
+  isAudioEnabled, 
+  onAudioToggle,
+  voice = 'alloy'
+}: InputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string>('');
+  const [transcript, setTranscript] = useState("");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const isProcessingRef = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const realtimeRef = useRef<RealtimeWebRTC | null>(null);
   const maxRecordingTime = 300000; // 5 minutes max recording time
   const silenceThreshold = 5000; // 5 seconds of silence
+
+  // Initialize RealtimeWebRTC
+  useEffect(() => {
+    realtimeRef.current = new RealtimeWebRTC();
+    
+    // Set up event handlers
+    realtimeRef.current.on('transcript', (text: string) => {
+      setTranscript(text);
+    });
+
+    realtimeRef.current.on('status', (status: string) => {
+      setConnectionStatus(status);
+      if (status === 'Connected') {
+        setIsConnecting(false);
+      }
+    });
+
+    realtimeRef.current.on('error', (error: string) => {
+      console.error('Realtime error:', error);
+      toast.error(`Realtime error: ${error}`);
+      setIsVoiceModeActive(false);
+      setIsConnecting(false);
+    });
+
+    return () => {
+      if (realtimeRef.current) {
+        realtimeRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  const toggleVoiceMode = useCallback(async () => {
+    if (isVoiceModeActive) {
+      // Stop voice mode
+      if (realtimeRef.current) {
+        realtimeRef.current.disconnect();
+      }
+      setIsVoiceModeActive(false);
+      setIsConnecting(false);
+      setConnectionStatus('');
+      setTranscript("");
+      toast.info("Voice mode deactivated");
+    } else {
+      // Start voice mode
+      try {
+        setIsConnecting(true);
+        setConnectionStatus('Creating session...');
+        
+        if (!realtimeRef.current) {
+          realtimeRef.current = new RealtimeWebRTC();
+        }
+
+        // Create session
+        await realtimeRef.current.createSession({
+          model: 'gpt-4o-realtime-preview-2024-12-17',
+          voice: voice,
+          instructions: "You are a helpful AI assistant. Respond naturally and conversationally to user input."
+        });
+
+        // Connect to OpenAI Realtime
+        await realtimeRef.current.connect();
+        
+        setIsVoiceModeActive(true);
+        setTranscript("");
+        toast.success("Voice mode activated - Start speaking!");
+      } catch (error) {
+        console.error('Error starting voice mode:', error);
+        toast.error('Error starting voice mode');
+        setIsConnecting(false);
+        setConnectionStatus('');
+      }
+    }
+  }, [isVoiceModeActive, voice]);
 
   // Cleanup function to prevent memory leaks
   const cleanupAudioResources = useCallback(() => {
@@ -207,6 +296,9 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
+      if (realtimeRef.current) {
+        realtimeRef.current.disconnect();
+      }
     };
   }, [cleanupAudioResources]);
 
@@ -233,6 +325,24 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
         }}
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        {/* Voice Mode Button */}
+        <Button
+          variant={isVoiceModeActive ? "default" : "ghost"}
+          size="icon"
+          className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+          onClick={toggleVoiceMode}
+          disabled={isLoading || isRecording || isTranscribing || isConnecting}
+          title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
+        >
+          {isVoiceModeActive ? (
+            <MessageCircleOff className="h-5 w-5 text-white" />
+          ) : isConnecting ? (
+            <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <MessageCircle className="h-5 w-5" />
+          )}
+        </Button>
+
         {/* Audio Toggle Button */}
         <Button
           variant="ghost"
@@ -254,7 +364,7 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
           size="icon"
           className={`h-8 w-8 ${isRecording ? 'animate-pulse bg-red-100 dark:bg-red-900' : ''}`}
           onClick={handleMicClick}
-          disabled={!canRecord}
+          disabled={!canRecord || isVoiceModeActive}
           title={isRecording ? "Stop recording" : "Start voice recording"}
         >
           {isRecording ? (
@@ -281,7 +391,7 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            disabled={!input.trim() || isRecording || isTranscribing}
+            disabled={!input.trim() || isRecording || isTranscribing || isVoiceModeActive}
             onClick={() => {
               if (input.trim()) {
                 const formEvent = {
@@ -295,6 +405,16 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
           </Button>
         )}
       </div>
+
+      {/* Voice Mode Status Indicators */}
+      {isVoiceModeActive && (
+        <div className="absolute -top-8 left-0 right-0 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+            Voice Mode {connectionStatus || 'Connecting...'}
+          </div>
+        </div>
+      )}
 
       {/* Recording Status Indicator */}
       {isRecording && (
@@ -312,6 +432,16 @@ export function Textarea({ handleInputChange, input, isLoading, stop, handleSubm
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
             Transcribing with OpenAI...
+          </div>
+        </div>
+      )}
+
+      {/* Voice Mode Transcript Display */}
+      {isVoiceModeActive && transcript && (
+        <div className="absolute -top-24 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
+          <div className="mb-2">
+            <span className="text-xs font-medium text-gray-500">You said:</span>
+            <p className="text-sm">{transcript}</p>
           </div>
         </div>
       )}
