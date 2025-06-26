@@ -221,32 +221,32 @@ export function AudioSettings({
                 <SelectContent>
                   <SelectItem value="alloy">
                     <div className="flex items-center gap-2">
-                      <span>Alloy</span>
+                      <span><b>Alloy (Male)</b> - Neutral, professional, great for all-purpose use</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="echo">
                     <div className="flex items-center gap-2">
-                      <span>Echo</span>
+                      <span><b>Echo (Male)</b> - Warm, friendly, conversational tone</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="fable">
                     <div className="flex items-center gap-2">
-                      <span>Fable</span>
+                      <span><b>Fable (Male)</b> - Storyteller vibe, perfect for narration and audiobooks</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="onyx">
                     <div className="flex items-center gap-2">
-                      <span>Onyx</span>
+                      <span><b>Onyx (Male)</b> - Deep, serious, with authority</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="nova">
                     <div className="flex items-center gap-2">
-                      <span>Nova</span>
+                      <span><b>Nova (Female)</b> - Clear, articulate, great for instructions</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="shimmer">
                     <div className="flex items-center gap-2">
-                      <span>Shimmer</span>
+                      <span><b>Shimmer (Female)</b> - Light, expressive, upbeat energy</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
