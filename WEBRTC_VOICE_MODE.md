@@ -176,6 +176,16 @@ Visit `/realtime-test` to test the WebRTC implementation:
    - Check network connection quality
    - Consider using STUN servers closer to user location
 
+### Known Issues
+
+Based on community reports, there have been some intermittent issues with the OpenAI Realtime API:
+
+1. **Audio Input Not Working** - Some users reported that the API stopped accepting audio input despite no code changes. This appears to be a service-side issue that OpenAI has addressed.
+
+2. **Connection Failures** - Occasional connection failures that may be related to Azure infrastructure issues.
+
+3. **Mute/Unmute Issues** - Push-to-talk functionality may be affected by browser updates or API changes.
+
 ### Debug Information
 
 Enable console logging to debug issues:
@@ -185,6 +195,13 @@ Enable console logging to debug issues:
 console.log('WebRTC connection state:', this.peerConnection?.connectionState);
 console.log('Data channel state:', this.dataChannel?.readyState);
 ```
+
+### Best Practices
+
+1. **Error Handling**: Always implement proper error handling for connection failures
+2. **Reconnection Logic**: Implement automatic reconnection for dropped connections
+3. **User Feedback**: Provide clear status indicators to users
+4. **Fallback Options**: Consider implementing fallback to text-based chat when voice fails
 
 ## Security Considerations
 
@@ -237,4 +254,10 @@ console.log('Data channel state:', this.dataChannel?.readyState);
    - Voice activity detection
    - Automatic conversation flow
    - Contextual responses
-   - Personalization options 
+   - Personalization options
+
+## References
+
+- [OpenAI Realtime API Documentation](https://platform.openai.com/docs/guides/realtime)
+- [WebRTC Hacks Guide](https://webrtchacks.com/the-unofficial-guide-to-openai-realtime-webrtc-api/)
+- [Community Discussion on Audio Issues](https://community.openai.com/t/realtime-webrtc-api-not-taking-audio-input/1091949) 
