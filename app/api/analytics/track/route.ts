@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { typedSupabaseAdmin } from '@/lib/supabase';
 import { headers } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -25,8 +25,11 @@ export async function POST(request: NextRequest) {
     // Determine environment
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
 
+    // Create Supabase client
+    const supabase = await createClient();
+
     // Insert engagement metric
-    const { data, error } = await typedSupabaseAdmin
+    const { data, error } = await supabase
       .from('engagement_metrics')
       .insert({
         visitor_id,
@@ -72,8 +75,11 @@ export async function GET(request: NextRequest) {
     const environment = searchParams.get('environment') || 'prod';
     const days = parseInt(searchParams.get('days') || '30');
 
-    // Get engagement analytics using the database function
-    const { data, error } = await typedSupabaseAdmin
+    // Create Supabase client
+    const supabase = await createClient();
+
+    // Get engagement analytics using the stored procedure
+    const { data, error } = await supabase
       .rpc('get_engagement_analytics', {
         p_environment: environment,
         p_days: days
@@ -82,18 +88,19 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching engagement analytics:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch analytics' },
+        { error: 'Failed to fetch engagement analytics' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: data[0] || null 
+    return NextResponse.json({
+      success: true,
+      data,
+      message: 'Engagement analytics retrieved successfully'
     });
 
   } catch (error) {
-    console.error('Error fetching engagement analytics:', error);
+    console.error('Error in engagement analytics:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
