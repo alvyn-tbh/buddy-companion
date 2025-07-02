@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
+import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
   // Handle Supabase auth session updates
@@ -18,6 +19,45 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
   }
+
+  // Handle protected chat routes - require authentication
+  const protectedChatRoutes = [
+    '/corporate/chat',
+    '/travel/chat',
+    '/emotional/chat', 
+    '/culture/chat'
+  ];
+
+  if (protectedChatRoutes.includes(request.nextUrl.pathname)) {
+    // Create Supabase client to check authentication
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      // Redirect to the corresponding service page if not authenticated
+      const servicePath = request.nextUrl.pathname.split('/')[1]; // Get 'corporate', 'travel', etc.
+      const redirectUrl = new URL(`/${servicePath}`, request.url);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
   
   return supabaseResponse;
 }
@@ -33,4 +73,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-}; 
+};
