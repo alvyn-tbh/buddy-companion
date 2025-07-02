@@ -1,23 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-// Client for client-side operations
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Admin client for server-side operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { createClient } from './supabase/client';
 
 // Database types
 export interface Database {
@@ -100,11 +81,11 @@ export interface Database {
   };
 }
 
-// Typed Supabase client
-export const typedSupabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-export const typedSupabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-}); 
+// Export the createClient function for use in components
+export { createClient } from './supabase/client';
+
+// For backward compatibility, create a default client instance
+// This should only be used in client components
+export const supabase = createClient();
+
+ 

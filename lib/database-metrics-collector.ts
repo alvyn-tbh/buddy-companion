@@ -1,4 +1,4 @@
-import { typedSupabaseAdmin } from './supabase';
+import { createClient } from './supabase/server';
 
 interface DatabaseStats {
   total_size_bytes: number;
@@ -10,12 +10,14 @@ interface DatabaseStats {
 // Collect database metrics from Supabase
 export async function collectDatabaseMetrics(): Promise<DatabaseStats | null> {
   try {
+    const supabase = await createClient();
+    
     // Note: Supabase doesn't provide direct access to all these metrics via SQL
     // You would need to use Supabase's API or dashboard to get some of these metrics
     // For now, we'll collect what we can via SQL queries
 
     // Get table count and approximate size
-    const { data: tableStats, error: tableError } = await typedSupabaseAdmin
+    const { data: tableStats, error: tableError } = await supabase
       .rpc('get_database_stats');
 
     if (tableError) {
@@ -42,9 +44,10 @@ export async function collectDatabaseMetrics(): Promise<DatabaseStats | null> {
 // Store database metrics
 export async function storeDatabaseMetrics(stats: DatabaseStats): Promise<boolean> {
   try {
+    const supabase = await createClient();
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
 
-    const { error } = await typedSupabaseAdmin
+    const { error } = await supabase
       .from('database_metrics')
       .insert({
         total_size_bytes: stats.total_size_bytes,
@@ -60,7 +63,6 @@ export async function storeDatabaseMetrics(stats: DatabaseStats): Promise<boolea
       return false;
     }
 
-    console.log('Database metrics stored successfully');
     return true;
   } catch (error) {
     console.error('Error storing database metrics:', error);
