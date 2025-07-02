@@ -35,6 +35,12 @@ export default function AuthCallbackPage() {
           setTimeout(() => {
             router.push('/');
           }, 1500);
+
+          // Log login event
+          const { user } = data.session;
+          if (user) {
+            supabase.from('login_history').insert({ user_id: user.id });
+          }
         } else {
           setError('No session found');
           setStatus('error');
