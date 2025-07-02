@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { AuthUser, AuthState, signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithGitHub, signOut, getCurrentUser, onAuthStateChange, resetPassword, updatePassword, updateProfile, SignUpData, SignInData } from '@/lib/auth';
+import { AuthState, signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithGitHub, signOut, getCurrentUser, onAuthStateChange, resetPassword, updatePassword, updateProfile, SignUpData, SignInData } from '@/lib/auth';
 import { toast } from 'sonner';
 
 interface AuthContextType extends AuthState {
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading: false,
       }));
     } catch (error) {
+      console.error('Error refreshing user:', error);
       setState(prev => ({
         ...prev,
         error: 'Failed to get current user',
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Account created successfully! Please check your email to verify your account.');
       }
     } catch (error) {
+      console.error('Error signing up:', error);
       const errorMessage = 'An unexpected error occurred during sign up';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Signed in successfully!');
       }
     } catch (error) {
+      console.error('Error signing in:', error);
       const errorMessage = 'An unexpected error occurred during sign in';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.info('Redirecting to Google...');
       }
     } catch (error) {
+      console.error('Error signing in with Google:', error);
       const errorMessage = 'An unexpected error occurred during Google sign in';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -115,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.info('Redirecting to GitHub...');
       }
     } catch (error) {
+      console.error('Error signing in with GitHub:', error);
       const errorMessage = 'An unexpected error occurred during GitHub sign in';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -135,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Signed out successfully!');
       }
     } catch (error) {
+      console.error('Error signing out:', error);
       const errorMessage = 'An unexpected error occurred during sign out';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -155,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Password reset email sent! Please check your inbox.');
       }
     } catch (error) {
+      console.error('Error resetting password:', error);
       const errorMessage = 'An unexpected error occurred during password reset';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -175,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Password updated successfully!');
       }
     } catch (error) {
+      console.error('Error updating password:', error);
       const errorMessage = 'An unexpected error occurred during password update';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);
@@ -195,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Profile updated successfully!');
       }
     } catch (error) {
+      console.error('Error updating profile:', error);
       const errorMessage = 'An unexpected error occurred during profile update';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       toast.error(errorMessage);

@@ -60,6 +60,7 @@ export async function signUpWithEmail(data: SignUpData): Promise<{ user: AuthUse
 
     return { user: null, error: 'Sign up failed' };
   } catch (error) {
+    console.error('Sign up error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
@@ -70,7 +71,7 @@ export async function signUpWithEmail(data: SignUpData): Promise<{ user: AuthUse
 export async function signInWithEmail(data: SignInData): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
     const supabase = createClient();
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
@@ -79,20 +80,27 @@ export async function signInWithEmail(data: SignInData): Promise<{ user: AuthUse
       return { user: null, error: error.message };
     }
 
-    if (authData.user) {
-      const user: AuthUser = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        name: authData.user.user_metadata?.name,
-        avatar_url: authData.user.user_metadata?.avatar_url,
-        provider: 'email',
-        created_at: authData.user.created_at,
+    if (user) {
+      // Log the login event
+      await supabase.from('login_history').insert({
+        user_id: user.id,
+        // login_at will default to now()
+      });
+
+      const authUser: AuthUser = {
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.name,
+        avatar_url: user.user_metadata?.avatar_url,
+        provider: user.app_metadata?.provider || 'email',
+        created_at: user.created_at,
       };
-      return { user, error: null };
+      return { user: authUser, error: null };
     }
 
     return { user: null, error: 'Sign in failed' };
   } catch (error) {
+    console.error('Sign in error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
@@ -103,7 +111,7 @@ export async function signInWithEmail(data: SignInData): Promise<{ user: AuthUse
 export async function signInWithGoogle(): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -118,6 +126,7 @@ export async function signInWithGoogle(): Promise<{ user: AuthUser | null; error
     // The actual user data will be available after the redirect
     return { user: null, error: null };
   } catch (error) {
+    console.error('Google sign in error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
@@ -128,7 +137,7 @@ export async function signInWithGoogle(): Promise<{ user: AuthUser | null; error
 export async function signInWithGitHub(): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -141,6 +150,7 @@ export async function signInWithGitHub(): Promise<{ user: AuthUser | null; error
 
     return { user: null, error: null };
   } catch (error) {
+    console.error('GitHub sign in error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
@@ -154,6 +164,7 @@ export async function signOut(): Promise<{ error: string | null }> {
     const { error } = await supabase.auth.signOut();
     return { error: error?.message || null };
   } catch (error) {
+    console.error('Sign out error:', error);
     return { error: 'An unexpected error occurred' };
   }
 }
@@ -184,6 +195,7 @@ export async function getCurrentUser(): Promise<{ user: AuthUser | null; error: 
 
     return { user: null, error: null };
   } catch (error) {
+    console.error('Get current user error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
@@ -204,6 +216,7 @@ export async function resetPassword(email: string): Promise<{ error: string | nu
 
     return { error: null };
   } catch (error) {
+    console.error('Reset password error:', error);
     return { error: 'An unexpected error occurred' };
   }
 }
@@ -224,6 +237,7 @@ export async function updatePassword(password: string): Promise<{ error: string 
 
     return { error: null };
   } catch (error) {
+    console.error('Update password error:', error);
     return { error: 'An unexpected error occurred' };
   }
 }
@@ -256,6 +270,7 @@ export async function updateProfile(data: { name?: string; avatar_url?: string }
 
     return { user: null, error: 'Profile update failed' };
   } catch (error) {
+    console.error('Update profile error:', error);
     return { user: null, error: 'An unexpected error occurred' };
   }
 }
