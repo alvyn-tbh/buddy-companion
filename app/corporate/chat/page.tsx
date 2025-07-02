@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Chat from "@/components/chat";
 import { trackPageView } from "@/lib/analytics";
+import { AuthGuard } from '@/components/auth-guard';
 
 // Corporate-specific TTS configuration
 const CORPORATE_TTS_CONFIG = {
@@ -26,14 +27,16 @@ export default function Page() {
   }, [ttsConfig]);
 
   return (
-    <div className="corporate-chat-container">
-      <Chat 
-        api="/api/corporate" 
-        chat_url="/corporate/chat" 
-        features_url="/corporate/features" 
-        how_it_works_url="/corporate/how-it-works"
-        ttsConfig={ttsConfig}
-      />
-    </div>
+    <AuthGuard redirectTo="/corporate">
+      <div className="corporate-chat-container">
+        <Chat 
+          api="/api/corporate" 
+          chat_url="/corporate/chat" 
+          features_url="/corporate/features" 
+          how_it_works_url="/corporate/how-it-works"
+          ttsConfig={ttsConfig}
+        />
+      </div>
+    </AuthGuard>
   );
 }

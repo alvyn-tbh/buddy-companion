@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { motion } from "framer-motion";
 import Header from '@/components/sub-header';
 import Footer from '@/components/footer';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 export default function LandingPage() {
+  const { user } = useAuth();
+
   return (
     <div className="h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-800 relative overflow-hidden flex flex-col">
       {/* Animated Background Elements */}
@@ -75,12 +78,32 @@ export default function LandingPage() {
             transition={{ delay: 0.6 }}
             className="mt-12 text-center"
           >
-            <Link
-              href="/corporate/chat"
-              className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-10 rounded-full text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-            >
-              Start Your Journey →
-            </Link>
+            {user ? (
+              // User is authenticated - show chat button
+              <Link
+                href="/corporate/chat"
+                className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-10 rounded-full text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                Start Your Journey →
+              </Link>
+            ) : (
+              // User is not authenticated - show sign in prompt
+              <div className="space-y-4">
+                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl max-w-md mx-auto">
+                  <div className="text-amber-600 text-2xl mb-2">🔒</div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign In Required</h3>
+                  <p className="text-gray-600 mb-4">
+                    Please sign in to access the corporate chat companion and start your wellness journey.
+                  </p>
+                  <Link
+                    href="/auth"
+                    className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-8 rounded-full text-base hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  >
+                    Sign In to Continue
+                  </Link>
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       </main>
