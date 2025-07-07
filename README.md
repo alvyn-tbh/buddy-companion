@@ -24,6 +24,7 @@
 - **🎨 Modern UI** - Built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind CSS](https://tailwindcss.com)
 - **⚡ Performance Optimized** - Built with the latest [Next.js](https://nextjs.org) App Router
 - **🔧 Extensible Architecture** - Easy to add new AI providers and features
+- **🔐 Conditional Authentication** - Optional user authentication for testing and development
 
 ## Voice Mode
 
@@ -71,7 +72,17 @@ You can deploy your own version to Vercel by clicking the button below:
    Create a `.env.local` file with the following variables:
 
    ```env
+   # OpenAI Configuration
    OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Supabase Configuration (for authentication)
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   
+   # Authentication (Optional - for testing)
+   USER_AUTH=true                    # Enable user authentication
+   NEXT_PUBLIC_USER_AUTH=true        # Client-side auth flag
    ```
 
 3. Run the development server:
@@ -85,6 +96,35 @@ You can deploy your own version to Vercel by clicking the button below:
    ```
 
 4. Open [http://localhost:3000](http://localhost:3000) to view your Buddy AI application.
+
+## Authentication Configuration
+
+The application supports conditional authentication using the `USER_AUTH` environment variable:
+
+### Enable Authentication (Default)
+```bash
+# Set these in your .env.local
+USER_AUTH=true
+NEXT_PUBLIC_USER_AUTH=true
+```
+
+### Disable Authentication (For Testing)
+```bash
+# Set these in your .env.local
+USER_AUTH=false
+NEXT_PUBLIC_USER_AUTH=false
+```
+
+**Behavior:**
+- `USER_AUTH=true`: Authentication required for protected routes
+- `USER_AUTH=false` or not set: No authentication required (shows "Auth Disabled" indicator)
+
+This is useful for:
+- Development and testing without authentication setup
+- Demo presentations
+- Debugging authentication-related issues
+
+⚠️ **Never disable authentication in production!**
 
 ## Voice Mode Setup
 
@@ -143,6 +183,7 @@ buddy-companion/
 - [WebRTC Voice Mode Guide](./WEBRTC_VOICE_MODE.md) - Detailed voice mode documentation
 - [Audio Features](./AUDIO_FEATURES.md) - Audio functionality overview
 - [Setup Guide](./SETUP.md) - Complete setup instructions
+- [Authentication Guide](./USER_AUTH_DISABLE.md) - Conditional authentication documentation
 
 ## Contributing
 
