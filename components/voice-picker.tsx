@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { VoiceAvatarGrid, VoiceAvatarWithInfo } from "./voice-avatar";
-import { toast } from "sonner";
 
 interface VoicePickerProps {
   selectedVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
@@ -12,7 +10,6 @@ interface VoicePickerProps {
   title?: string;
   description?: string;
   className?: string;
-  showTestButton?: boolean;
 }
 
 export function VoicePicker({ 
@@ -20,59 +17,8 @@ export function VoicePicker({
   onVoiceSelect, 
   title = "Choose Your Voice",
   description = "Select a voice that matches your preference",
-  className = "",
-  showTestButton = true
+  className = ""
 }: VoicePickerProps) {
-  const [isTesting, setIsTesting] = useState(false);
-
-  const testVoice = async () => {
-    if (isTesting) return;
-    
-    setIsTesting(true);
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `Hello! I'm ${selectedVoice}. This is how I sound.`,
-          voice: selectedVoice,
-          model: 'tts-1',
-          speed: 1.0,
-          format: 'mp3'
-        }),
-      });
-
-      if (response.ok) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          setIsTesting(false);
-          toast.success("Voice test completed");
-        };
-        
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          setIsTesting(false);
-          toast.error("Voice test failed");
-        };
-        
-        await audio.play();
-      } else {
-        setIsTesting(false);
-        toast.error("Voice test failed");
-      }
-    } catch (error) {
-      setIsTesting(false);
-      toast.error("Voice test failed");
-      console.error(error);
-    }
-  };
-
   return (
     <Card className={className}>
       <CardHeader>
@@ -93,20 +39,6 @@ export function VoicePicker({
           selectedVoice={selectedVoice}
           onVoiceSelect={onVoiceSelect}
         />
-        
-        {showTestButton && (
-          <div className="flex justify-center pt-2">
-            <Button
-              onClick={testVoice}
-              disabled={isTesting}
-              variant="outline"
-              size="sm"
-              className="w-full max-w-xs"
-            >
-              {isTesting ? "Testing..." : "Test Voice"}
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -148,7 +80,6 @@ export function VoicePickerModal({
               onVoiceSelect(voice);
               onClose();
             }}
-            showTestButton={true}
           />
         </div>
       </div>
