@@ -39,6 +39,24 @@ export async function POST(request: NextRequest) {
       console.warn('Could not get user for usage tracking:', error);
     }
 
+    // Check if this is the first message (only system message exists)
+    const isFirstMessage = messages.length === 1 && messages[0].role === 'system';
+    
+    if (isFirstMessage) {
+      // Send introductory message
+      const introMessage = "I am your corporate wellness companion, designed to support you during emotionally demanding moments at work. I can help you with burnout, decision fatigue, rumination, or personal doubt by offering a calm, thoughtful space for reflection. What is your name, company you are working, and your role?";
+      
+      return new Response(
+        `0:"${introMessage}"\n`,
+        {
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Thread-Id': existingThreadId || 'gpt-api',
+          },
+        }
+      );
+    }
+
     // Format messages for GPT API
     const formattedMessages = [
       {

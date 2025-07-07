@@ -1,13 +1,14 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Textarea } from "./textarea";
 import { ProjectOverview } from "./project-overview";
 import { Messages } from "./messages";
 import Header from "./sub-header";
 import { toast } from "sonner";
 import { SuggestedPrompts } from "./suggested-prompts";
+import type { Message as TMessage } from "ai";
 
 // interface Message {
 //   id: string;
@@ -29,6 +30,8 @@ export default function Chat(props: {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [voice, setVoice] = useState<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'>(props.ttsConfig?.defaultVoice || 'alloy');
+  const [hasStartedConversation, setHasStartedConversation] = useState(false);
+  const [introMessage, setIntroMessage] = useState<TMessage | null>(null);
 
   // Debug voice changes
   const handleVoiceChange = (newVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') => {
@@ -90,6 +93,29 @@ export default function Chat(props: {
       },
     });
 
+  // Auto-start conversation for corporate context
+  useEffect(() => {
+    if (!hasStartedConversation && messages.length === 0 && props.api === '/api/corporate') {
+      // Add a small delay to ensure the chat is ready
+      setTimeout(() => {
+        const introContent = "I am your corporate wellness companion, designed to support you during emotionally demanding moments at work. I can help you with burnout, decision fatigue, rumination, or personal doubt by offering a calm, thoughtful space for reflection. What is your name, company you are working, and your role?";
+        
+        setIntroMessage({
+          id: 'intro-message',
+          role: 'assistant',
+          content: introContent,
+          parts: [
+            {
+              type: 'text',
+              text: introContent
+            }
+          ]
+        });
+        setHasStartedConversation(true);
+      }, 500);
+    }
+  }, [hasStartedConversation, messages.length, props.api]);
+
   const isLoading = status === "streaming" || status === "submitted";
 
   const handleSendMessage = (message: string) => {
@@ -104,8 +130,11 @@ export default function Chat(props: {
     chatHandleInputChange(event as React.ChangeEvent<HTMLTextAreaElement>);
   };
 
-  // Filter out system messages from display
-  const displayMessages = messages.filter(message => message.role !== 'system');
+  // Filter out system messages from display and include intro message
+  const displayMessages = [
+    ...(introMessage ? [introMessage] : []),
+    ...messages.filter(message => message.role !== 'system')
+  ];
 
   return (
     <div className="h-dvh flex flex-col justify-center w-full stretch">
