@@ -1,27 +1,12 @@
 "use client";
 
-import type { Message as TMessage } from "ai";
-import { AnimatePresence, motion } from "framer-motion";
 import { memo, useCallback, useEffect, useState } from "react";
-
-import { Markdown } from "./markdown";
-import { AudioPlayer } from "./audio-player";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
-  CheckCircle,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  Loader2,
-  PocketKnife,
-  SparklesIcon,
-  StopCircle,
-} from "lucide-react";
-import { SpinnerIcon } from "./icons";
-
-interface TextPart {
-  type: "text";
-  text: string;
-}
+import { Markdown } from "./markdown";
+import { SparklesIcon } from "lucide-react";
+import { CheckCircle, ChevronDownIcon, ChevronUpIcon, Loader2, PocketKnife, StopCircle } from "lucide-react";
+import type { Message as TMessage } from "ai";
 
 interface ReasoningPart {
   type: "reasoning";
@@ -69,7 +54,7 @@ export function ReasoningMessagePart({
         <div className="flex flex-row gap-2 items-center">
           <div className="font-medium text-sm">Reasoning</div>
           <div className="animate-spin">
-            <SpinnerIcon />
+            <Loader2 className="h-4 w-4" />
           </div>
         </div>
       ) : (
@@ -124,103 +109,12 @@ const PurePreviewMessage = ({
   message,
   isLatestMessage,
   status,
-  isAudioEnabled,
-  ttsConfig,
-  ttsModel,
-  voice: selectedVoice,
 }: {
   message: TMessage;
   isLoading: boolean;
   status: "error" | "submitted" | "streaming" | "ready";
   isLatestMessage: boolean;
-  isAudioEnabled: boolean;
-  ttsConfig?: {
-    defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
-    speed: number;
-    autoPlay: boolean;
-  };
-  ttsModel?: 'tts-1' | 'tts-1-hd';
-  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 }) => {
-  // Extract text content from message parts for audio playback
-  const getMessageText = () => {
-    if (!message.parts) return message.content || "";
-    
-    return message.parts
-      .filter(part => part.type === "text")
-      .map(part => (part as TextPart).text)
-      .join(" ");
-  };
-
-  const messageText = getMessageText();
-
-  // Use corporate TTS config if provided, otherwise use defaults
-  const voice = selectedVoice || ttsConfig?.defaultVoice || 'alloy';
-  const speed = ttsConfig?.speed || 1.0;
-  const autoPlay = ttsConfig?.autoPlay ?? true;
-  const model = ttsModel || 'tts-1';
-
-  // Auto-play audio for the latest completed assistant message
-  useEffect(() => {
-    // Only auto-play for simple messages without parts, since AudioPlayer handles individual parts
-    const hasTextParts = message.parts && message.parts.some(part => part.type === "text");
-    
-    if (
-      message.role === "assistant" &&
-      isLatestMessage &&
-      isAudioEnabled &&
-      status === "ready" &&
-      messageText.trim() &&
-      autoPlay &&
-      !hasTextParts // Don't auto-play if message has individual text parts
-    ) {
-      // Add a longer delay and check if user is still on the page
-      const timer = setTimeout(async () => {
-        if (!document.hidden) { // Only auto-play if tab is active
-          try {
-            // Call OpenAI TTS API for auto-play
-            const response = await fetch('/api/tts', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                text: messageText,
-                voice: voice,
-                model: model,
-                speed: speed,
-                format: 'mp3'
-              }),
-            });
-
-            if (response.ok) {
-              // Get the audio data as a blob
-              const audioBlob = await response.blob();
-              const audioUrl = URL.createObjectURL(audioBlob);
-              const audio = new Audio(audioUrl);
-              
-              audio.onended = () => {
-                // Clean up the blob URL
-                URL.revokeObjectURL(audioUrl);
-              };
-              
-              audio.onerror = () => {
-                // Clean up the blob URL
-                URL.revokeObjectURL(audioUrl);
-              };
-              
-              await audio.play();
-            }
-          } catch (error) {
-            console.error('Auto-play audio error:', error);
-          }
-        }
-      }, 1000); // Increased delay to 1 second
-
-      return () => clearTimeout(timer);
-    }
-  }, [message.role, isLatestMessage, isAudioEnabled, status, messageText, voice, speed, autoPlay, model, message.parts]);
-
   return (
     <AnimatePresence key={message.id}>
       <motion.div
@@ -262,16 +156,6 @@ const PurePreviewMessage = ({
                         })}
                       >
                         <Markdown>{part.text}</Markdown>
-                        {/* Add audio player for assistant messages */}
-                        {message.role === "assistant" && (
-                          <AudioPlayer 
-                            text={part.text} 
-                            isEnabled={isAudioEnabled}
-                            voice={voice}
-                            ttsModel={model}
-                            className="mt-2"
-                          />
-                        )}
                       </div>
                     </motion.div>
                   );
@@ -340,7 +224,6 @@ export const Message = memo(PurePreviewMessage, (prevProps, nextProps) => {
   // More efficient comparison
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.isLatestMessage !== nextProps.isLatestMessage) return false;
-  if (prevProps.isAudioEnabled !== nextProps.isAudioEnabled) return false;
   
   // Deep comparison only when necessary
   if (prevProps.message.id !== nextProps.message.id) return false;

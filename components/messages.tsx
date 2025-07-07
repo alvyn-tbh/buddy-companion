@@ -6,22 +6,10 @@ export const Messages = ({
   messages,
   isLoading,
   status,
-  isAudioEnabled,
-  ttsConfig,
-  ttsModel,
-  voice,
 }: {
   messages: TMessage[];
   isLoading: boolean;
   status: "error" | "submitted" | "streaming" | "ready";
-  isAudioEnabled: boolean;
-  ttsConfig?: {
-    defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
-    speed: number;
-    autoPlay: boolean;
-  };
-  ttsModel?: 'tts-1' | 'tts-1-hd';
-  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
 }) => {
   const [containerRef, endRef] = useScrollToBottom();
   
@@ -38,10 +26,6 @@ export const Messages = ({
             isLoading={isLoading}
             message={m}
             status={status}
-            isAudioEnabled={isAudioEnabled}
-            ttsConfig={ttsConfig}
-            ttsModel={ttsModel}
-            voice={voice}
           />
         ))}
         <div className="h-1" ref={endRef} />

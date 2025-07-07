@@ -14,8 +14,6 @@ export default function SubHeader(props: {
   how_it_works_url: string,
   isAudioEnabled?: boolean,
   onAudioToggle?: (enabled: boolean) => void,
-  ttsModel?: 'tts-1' | 'tts-1-hd',
-  onTTSModelChange?: (model: 'tts-1' | 'tts-1-hd') => void,
   voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
   onVoiceChange?: (voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') => void
 }) {
@@ -112,8 +110,6 @@ export default function SubHeader(props: {
               <AudioSettings 
                 isAudioEnabled={props.isAudioEnabled} 
                 onAudioToggle={props.onAudioToggle}
-                ttsModel={props.ttsModel}
-                onTTSModelChange={props.onTTSModelChange}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
               />
@@ -140,8 +136,6 @@ export default function SubHeader(props: {
               <AudioSettings 
                 isAudioEnabled={props.isAudioEnabled} 
                 onAudioToggle={props.onAudioToggle}
-                ttsModel={props.ttsModel}
-                onTTSModelChange={props.onTTSModelChange}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
               />

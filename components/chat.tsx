@@ -24,19 +24,11 @@ export default function Chat(props: {
     defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
     speed: number;
     autoPlay: boolean;
-    defaultModel?: 'tts-1' | 'tts-1-hd';
   }
 }) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [ttsModel, setTTSModel] = useState<'tts-1' | 'tts-1-hd'>(props.ttsConfig?.defaultModel || 'tts-1');
   const [voice, setVoice] = useState<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'>(props.ttsConfig?.defaultVoice || 'alloy');
-
-  // Debug TTS model changes
-  const handleTTSModelChange = (model: 'tts-1' | 'tts-1-hd') => {
-    console.log('Chat component: TTS model changing from', ttsModel, 'to', model);
-    setTTSModel(model);
-  };
 
   // Debug voice changes
   const handleVoiceChange = (newVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') => {
@@ -131,8 +123,6 @@ export default function Chat(props: {
         how_it_works_url={props.how_it_works_url}
         isAudioEnabled={isAudioEnabled}
         onAudioToggle={setIsAudioEnabled}
-        ttsModel={ttsModel}
-        onTTSModelChange={handleTTSModelChange}
         voice={voice}
         onVoiceChange={handleVoiceChange}
       />
@@ -149,10 +139,6 @@ export default function Chat(props: {
           messages={displayMessages} 
           isLoading={isLoading} 
           status={status} 
-          isAudioEnabled={isAudioEnabled}
-          ttsConfig={ttsConfig}
-          ttsModel={ttsModel}
-          voice={voice}
         />
       )}
       <form
