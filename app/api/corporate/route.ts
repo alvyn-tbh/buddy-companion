@@ -18,7 +18,16 @@ export async function POST(request: NextRequest) {
     const { messages, existingThreadId } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
+      const errorMessage = 'Invalid messages format';
+      return new Response(
+        `0:"${errorMessage}"\n`,
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+        }
+      );
     }
 
     // Use existing thread or create new one
@@ -45,7 +54,28 @@ export async function POST(request: NextRequest) {
 
     if (runStatus.status === 'failed') {
       console.error('Run failed:', runStatus.status, runStatus.last_error);
-      return NextResponse.json({ error: 'Assistant run failed' }, { status: 500 });
+      
+      // Check for specific error types
+      const errorMessage = runStatus.last_error?.message || 'Unknown error';
+      let userFriendlyMessage = 'Assistant run failed';
+      
+      if (errorMessage.includes('rate_limit_exceeded') || errorMessage.includes('quota')) {
+        userFriendlyMessage = 'OpenAI API rate limit exceeded. You have exceeded your current quota. Please check your plan and billing details.';
+      } else if (errorMessage.includes('authentication')) {
+        userFriendlyMessage = 'OpenAI API authentication failed. Please check your API key configuration.';
+      }
+      
+      // Return error in streaming format
+      return new Response(
+        `0:"${userFriendlyMessage}"\n`,
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Thread-Id': threadId,
+          },
+        }
+      );
     }
 
     // Get the response
@@ -75,7 +105,32 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Handle specific OpenAI errors
+    let userFriendlyMessage = 'An unexpected error occurred';
+    
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes('rate_limit_exceeded') || errorMessage.includes('quota')) {
+        userFriendlyMessage = 'OpenAI API rate limit exceeded. You have exceeded your current quota. Please check your plan and billing details.';
+      } else if (errorMessage.includes('authentication')) {
+        userFriendlyMessage = 'OpenAI API authentication failed. Please check your API key configuration.';
+      } else {
+        userFriendlyMessage = `OpenAI API error: ${errorMessage}`;
+      }
+    }
+    
+    // Return error in streaming format
+    return new Response(
+      `0:"${userFriendlyMessage}"\n`,
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+      }
+    );
   }
 }
 
