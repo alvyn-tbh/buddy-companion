@@ -110,6 +110,7 @@ export class UsageTracker {
       } else {
         console.log(`Tracked usage: $${cost} for ${data.api_type} (${data.model})`);
       }
+
     } catch (error) {
       console.error('Error tracking usage:', error);
     }
@@ -118,7 +119,7 @@ export class UsageTracker {
   /**
    * Get usage statistics
    */
-  async getUsageStats(options: {
+  async getUsageStats(_options: {
     startDate?: Date;
     endDate?: Date;
     userId?: string;
@@ -131,27 +132,14 @@ export class UsageTracker {
   }> {
     try {
       const supabase = await createClient();
-      let query = supabase
+
+      const { data: usageData, error } = await supabase
         .from('api_usage')
-        .select('*');
-
-      if (options.startDate) {
-        query = query.gte('timestamp', options.startDate.toISOString());
-      }
-      if (options.endDate) {
-        query = query.lte('timestamp', options.endDate.toISOString());
-      }
-      if (options.userId) {
-        query = query.eq('user_id', options.userId);
-      }
-      if (options.apiType) {
-        query = query.eq('api_type', options.apiType);
-      }
-
-      const { data, error } = await query;
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching usage stats:', error);
+        console.error('Error fetching usage data:', error);
         return {
           totalCost: 0,
           usageByType: {},
@@ -160,37 +148,37 @@ export class UsageTracker {
         };
       }
 
-      // Calculate statistics
-      const totalCost = data.reduce((sum: number, record: { usage_dollars: number }) => sum + Number(record.usage_dollars), 0);
-      
-      const usageByType = data.reduce((acc: Record<string, number>, record: { api_type: string; usage_dollars: number }) => {
-        acc[record.api_type] = (acc[record.api_type] || 0) + Number(record.usage_dollars);
+      if (!usageData || usageData.length === 0) {
+        return {
+          totalCost: 0,
+          usageByType: {},
+          usageByUser: {},
+          dailyUsage: [],
+        };
+      }
+
+      const totalCost = usageData.reduce((sum: number, item: any) => sum + Number(item.usage_dollars), 0);
+      const usageByType = usageData.reduce((acc: Record<string, number>, item: any) => {
+        acc[item.api_type] = (acc[item.api_type] || 0) + Number(item.usage_dollars);
+        return acc;
+      }, {} as Record<string, number>);
+      const usageByUser = usageData.reduce((acc: Record<string, number>, item: any) => {
+        const userId = item.user_id || 'unknown';
+        acc[userId] = (acc[userId] || 0) + Number(item.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
 
-      const usageByUser = data.reduce((acc: Record<string, number>, record: { user_id: string; usage_dollars: number }) => {
-        if (record.user_id) {
-          acc[record.user_id] = (acc[record.user_id] || 0) + Number(record.usage_dollars);
-        }
+      const dailyUsage = usageData.reduce((acc: Record<string, number>, item: any) => {
+        const date = new Date(item.created_at).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + Number(item.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
-
-      // Group by day
-      const dailyUsage = data.reduce((acc: Record<string, number>, record: { timestamp: string; usage_dollars: number }) => {
-        const date = new Date(record.timestamp).toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + Number(record.usage_dollars);
-        return acc;
-      }, {} as Record<string, number>);
-
-      const dailyUsageArray = Object.entries(dailyUsage)
-        .map(([date, cost]) => ({ date, cost: cost as number }))
-        .sort((a, b) => a.date.localeCompare(b.date));
 
       return {
         totalCost,
         usageByType,
         usageByUser,
-        dailyUsage: dailyUsageArray,
+        dailyUsage: Object.entries(dailyUsage).map(([date, cost]) => ({ date, cost: Number(cost) })),
       };
     } catch (error) {
       console.error('Error getting usage stats:', error);
