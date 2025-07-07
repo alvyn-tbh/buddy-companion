@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 import { corporate } from '@/lib/system-prompt';
+import { usageTracker } from '@/lib/usage-tracker';
+import { createClient } from '@/lib/supabase/server';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -27,6 +29,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user ID for usage tracking
+    let userId: string | undefined;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch (error) {
+      console.warn('Could not get user for usage tracking:', error);
+    }
+
     // Format messages for GPT API
     const formattedMessages = [
       {
@@ -48,6 +60,13 @@ export async function POST(request: NextRequest) {
       max_tokens: 1000,
     });
 
+    // Track usage
+    const requestId = `corporate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // We'll track usage after the response is complete
+    let totalTokens = 0;
+    let responseContent = '';
+
     // Create a readable stream from the completion
     const stream = new ReadableStream({
       async start(controller) {
@@ -55,6 +74,7 @@ export async function POST(request: NextRequest) {
           for await (const chunk of completion) {
             const content = chunk.choices[0]?.delta?.content;
             if (content) {
+              responseContent += content;
               // Escape the content for streaming format
               const escapedContent = content
                 .replace(/\\/g, '\\\\')
@@ -65,7 +85,29 @@ export async function POST(request: NextRequest) {
               
               controller.enqueue(new TextEncoder().encode(`0:"${escapedContent}"\n`));
             }
+            
+            // Track tokens from usage
+            if (chunk.usage?.total_tokens) {
+              totalTokens = chunk.usage.total_tokens;
+            }
           }
+          
+          // Track usage after response is complete
+          if (totalTokens > 0) {
+            await usageTracker.trackUsage({
+              user_id: userId,
+              api_type: 'text',
+              model: 'gpt-4o-mini',
+              tokens_used: totalTokens,
+              request_id: requestId,
+              metadata: {
+                thread_id: existingThreadId,
+                message_count: messages.length,
+                response_length: responseContent.length,
+              },
+            });
+          }
+          
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);

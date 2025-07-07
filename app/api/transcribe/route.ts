@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { usageTracker } from '@/lib/usage-tracker';
+import { createClient } from '@/lib/supabase/server';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -24,6 +26,16 @@ export async function POST(request: NextRequest) {
         { error: 'OpenAI API key is not configured', details: 'Please set OPENAI_API_KEY environment variable' },
         { status: 500 }
       );
+    }
+
+    // Get user ID for usage tracking
+    let userId: string | undefined;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    } catch (error) {
+      console.warn('Could not get user for usage tracking:', error);
     }
 
     const formData = await request.formData();
@@ -78,6 +90,34 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('Transcription completed successfully');
+
+    // Track usage
+    const requestId = `transcribe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Calculate duration in minutes (estimate based on file size if not available)
+    let durationMinutes = 0;
+    if (responseFormat === 'verbose_json') {
+      const verboseResponse = transcription as VerboseTranscriptionResponse;
+      durationMinutes = verboseResponse.duration / 60;
+    } else {
+      // Estimate duration based on file size (rough approximation)
+      const bytesPerSecond = 16000 * 2; // 16kHz, 16-bit audio
+      durationMinutes = (audioFile.size / bytesPerSecond) / 60;
+    }
+
+    await usageTracker.trackUsage({
+      user_id: userId,
+      api_type: 'transcription',
+      model: 'whisper-1',
+      minutes_used: durationMinutes,
+      request_id: requestId,
+      metadata: {
+        file_size: audioFile.size,
+        file_type: audioFile.type,
+        language,
+        response_format: responseFormat,
+      },
+    });
 
     // Return the transcription result
     if (responseFormat === 'verbose_json') {
