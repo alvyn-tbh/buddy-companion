@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Volume2, VolumeX, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { VoiceAvatarGrid, VoiceAvatarWithInfo } from "./voice-avatar";
 
 interface AudioSettingsProps {
   isAudioEnabled: boolean;
@@ -215,40 +216,24 @@ export function AudioSettings({
               >
                 <SelectTrigger className="w-full">
                   <SelectValue>
-                    {voice}
+                    <VoiceAvatarWithInfo 
+                      voice={voice} 
+                      size="sm" 
+                      showInfo={true}
+                      isSelected={false}
+                    />
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alloy">
-                    <div className="flex items-center gap-2">
-                      <span><b>Alloy (Male)</b> - Neutral, professional, great for all-purpose use</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="echo">
-                    <div className="flex items-center gap-2">
-                      <span><b>Echo (Male)</b> - Warm, friendly, conversational tone</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="fable">
-                    <div className="flex items-center gap-2">
-                      <span><b>Fable (Male)</b> - Storyteller vibe, perfect for narration and audiobooks</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="onyx">
-                    <div className="flex items-center gap-2">
-                      <span><b>Onyx (Male)</b> - Deep, serious, with authority</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="nova">
-                    <div className="flex items-center gap-2">
-                      <span><b>Nova (Female)</b> - Clear, articulate, great for instructions</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="shimmer">
-                    <div className="flex items-center gap-2">
-                      <span><b>Shimmer (Female)</b> - Light, expressive, upbeat energy</span>
-                    </div>
-                  </SelectItem>
+                <SelectContent className="w-80">
+                  <div className="p-2">
+                    <VoiceAvatarGrid 
+                      selectedVoice={voice}
+                      onVoiceSelect={(selectedVoice) => {
+                        handleVoiceChange(selectedVoice);
+                        setIsSelectOpen(false);
+                      }}
+                    />
+                  </div>
                 </SelectContent>
               </Select>
             </div>
