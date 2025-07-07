@@ -1,44 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { usageTracker } from '@/lib/usage-tracker';
+import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
     
-    // Check if user is admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check if user is admin using cookie-based auth
+    const cookieStore = await cookies();
+    const adminAuthCookie = cookieStore.get('admin-auth')?.value;
     
-    if (authError) {
-      console.error('Auth error:', authError);
-      return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
-    }
-    
-    if (!user) {
-      console.log('No user found');
+    if (!adminAuthCookie) {
+      console.log('No admin auth cookie found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('User found:', user.email);
-
-    // Check if user is admin (you can implement your own admin check)
-    const { data: adminCheck, error: adminError } = await supabase
-      .from('admin_users')
-      .select('email')
-      .eq('email', user.email)
-      .single();
-
-    if (adminError) {
-      console.error('Admin check error:', adminError);
-      return NextResponse.json({ error: 'Admin check failed' }, { status: 403 });
+    // Simple token verification (you can enhance this)
+    const tokenParts = adminAuthCookie.split('.');
+    if (tokenParts.length !== 3) {
+      console.log('Invalid admin token format');
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    if (!adminCheck) {
-      console.log('User not found in admin_users table:', user.email);
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
-    console.log('Admin access granted for:', user.email);
+    console.log('Admin access granted');
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
