@@ -7,10 +7,6 @@ import { AdminNav } from '@/components/admin-nav';
 import {
   Users,
   Activity,
-  // TrendingUp,
-  // TrendingDown,
-  // Minus,
-  // Eye,
   BarChart3,
   PieChart,
   Calendar,
@@ -146,7 +142,7 @@ export default function AnalyticsDashboard() {
                   <Users className="h-8 w-8 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Total Visitors</p>
-                    <p className="text-2xl font-bold">{engagementData.total_visitors.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{engagementData.total_visitors?.toLocaleString() || '0'}</p>
                     <p className="text-sm text-gray-500">All time visits</p>
                   </div>
                 </div>
@@ -157,7 +153,7 @@ export default function AnalyticsDashboard() {
                   <UserCheck className="h-8 w-8 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-600">Unique Visitors</p>
-                    <p className="text-2xl font-bold">{engagementData.unique_visitors.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{engagementData.unique_visitors?.toLocaleString() || '0'}</p>
                     <p className="text-sm text-gray-500">Distinct users</p>
                   </div>
                 </div>
@@ -168,7 +164,7 @@ export default function AnalyticsDashboard() {
                   <Activity className="h-8 w-8 text-purple-600" />
                   <div>
                     <p className="text-sm text-gray-600">Total Sessions</p>
-                    <p className="text-2xl font-bold">{engagementData.total_sessions.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{engagementData.total_sessions?.toLocaleString() || '0'}</p>
                     <p className="text-sm text-gray-500">All sessions</p>
                   </div>
                 </div>
@@ -179,7 +175,7 @@ export default function AnalyticsDashboard() {
                   <Clock className="h-8 w-8 text-yellow-600" />
                   <div>
                     <p className="text-sm text-gray-600">Unique Sessions</p>
-                    <p className="text-2xl font-bold">{engagementData.unique_sessions.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{engagementData.unique_sessions?.toLocaleString() || '0'}</p>
                     <p className="text-sm text-gray-500">Distinct sessions</p>
                   </div>
                 </div>
@@ -200,7 +196,7 @@ export default function AnalyticsDashboard() {
                     {engagementData.top_service || 'N/A'}
                   </p>
                   <p className="text-gray-600">
-                    {engagementData.top_service_count?.toLocaleString()} uses
+                    {engagementData.top_service_count?.toLocaleString() || '0'} uses
                   </p>
                 </div>
               </div>
