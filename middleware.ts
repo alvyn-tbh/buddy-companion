@@ -4,6 +4,9 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
+  // Check if user authentication is enabled (only when USER_AUTH=true)
+  const isUserAuthEnabled = process.env.USER_AUTH === 'true';
+
   // Handle Supabase auth session updates
   const supabaseResponse = await updateSession(request);
 
@@ -20,7 +23,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle protected chat routes - require authentication
+  // Handle protected chat routes - require authentication only if enabled
   const protectedChatRoutes = [
     '/corporate/chat',
     '/travel/chat',
@@ -29,6 +32,11 @@ export async function middleware(request: NextRequest) {
   ];
 
   if (protectedChatRoutes.includes(request.nextUrl.pathname)) {
+    // Skip authentication check if USER_AUTH is not enabled
+    if (!isUserAuthEnabled) {
+      return supabaseResponse;
+    }
+
     // Create Supabase client to check authentication
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
