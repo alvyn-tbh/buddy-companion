@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { StagewiseDevTool } from '@/components/stagewise-toolbar';
 import { AuthProvider } from '@/lib/hooks/use-auth';
 
 const inter = Inter({
@@ -30,7 +29,6 @@ export default function RootLayout({
           {children}
         </AuthProvider>
         <Toaster />
-        <StagewiseDevTool />
       </body>
     </html>
   );
