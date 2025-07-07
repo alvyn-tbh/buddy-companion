@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { corporate } from '@/lib/system-prompt';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,10 +8,6 @@ const openai = new OpenAI({
 
 if (!process.env.OPENAI_API_KEY) {
   console.error('OPENAI_API_KEY environment variable is missing');
-}
-
-if (!process.env.OPENAI_CORPORATE_ASSISTANT_ID) {
-  console.error('OPENAI_CORPORATE_ASSISTANT_ID environment variable is missing');
 }
 
 export async function POST(request: NextRequest) {
@@ -30,78 +27,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use existing thread or create new one
-    const threadId = existingThreadId || (await openai.beta.threads.create()).id;
-
-    // Add the message to the thread
-    const messageContent = `${messages[messages.length - 1].content} ${template}`;
-    await openai.beta.threads.messages.create(threadId, {
-      role: 'user',
-      content: messageContent,
-    });
-
-    // Run the assistant
-    const run = await openai.beta.threads.runs.create(threadId, {
-      assistant_id: process.env.OPENAI_CORPORATE_ASSISTANT_ID!,
-    });
-
-    // Wait for the run to complete
-    let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-    while (runStatus.status === 'in_progress' || runStatus.status === 'queued') {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-    }
-
-    if (runStatus.status === 'failed') {
-      console.error('Run failed:', runStatus.status, runStatus.last_error);
-      
-      // Check for specific error types
-      const errorMessage = runStatus.last_error?.message || 'Unknown error';
-      let userFriendlyMessage = 'Assistant run failed';
-      
-      if (errorMessage.includes('rate_limit_exceeded') || errorMessage.includes('quota')) {
-        userFriendlyMessage = 'OpenAI API rate limit exceeded. You have exceeded your current quota. Please check your plan and billing details.';
-      } else if (errorMessage.includes('authentication')) {
-        userFriendlyMessage = 'OpenAI API authentication failed. Please check your API key configuration.';
-      }
-      
-      // Return error in streaming format
-      return new Response(
-        `0:"${userFriendlyMessage}"\n`,
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'text/plain',
-            'X-Thread-Id': threadId,
-          },
-        }
-      );
-    }
-
-    // Get the response
-    const threadMessages = await openai.beta.threads.messages.list(threadId);
-    const lastMessage = threadMessages.data[0];
-
-    const responseText = lastMessage.content[0].type === 'text' ? lastMessage.content[0].text.value : 'No text response';
-
-    // Properly escape the response text for the streaming format
-    const escapedResponse = responseText
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
-
-    // Return in the format expected by useChat
-    return new Response(
-      `0:"${escapedResponse}"\n`,
+    // Format messages for GPT API
+    const formattedMessages = [
       {
-        headers: {
-          'Content-Type': 'text/plain',
-          'X-Thread-Id': threadId,
-        },
+        role: 'system',
+        content: corporate
+      },
+      ...messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+    ];
+
+    // Use OpenAI GPT API instead of Assistant API
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', // You can change this to gpt-4o or gpt-4-turbo based on your needs
+      messages: formattedMessages,
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    // Create a readable stream from the completion
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of completion) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+              // Escape the content for streaming format
+              const escapedContent = content
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/\t/g, '\\t');
+              
+              controller.enqueue(new TextEncoder().encode(`0:"${escapedContent}"\n`));
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error('Streaming error:', error);
+          controller.error(error);
+        }
       }
-    );
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Thread-Id': existingThreadId || 'gpt-api', // Keep thread ID for compatibility
+      },
+    });
 
   } catch (error) {
     console.error('Error in API:', error);
@@ -133,5 +111,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-const template = `Please provide corporate and business advice. Be professional, strategic, and business-focused.`;
