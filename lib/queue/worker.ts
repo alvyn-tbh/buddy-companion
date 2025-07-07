@@ -9,33 +9,12 @@ import {
 import { initRedis, closeRedis } from '../redis';
 import { responseCache, generateCacheKey } from '../cache';
 import { transcribeAudio, base64ToBuffer, validateAudioInput } from '../audio-transcription';
+import { corporate } from '../system-prompt';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Helper function to wait for OpenAI run completion
-async function waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<void> {
-  const startTime = Date.now();
-  
-  while (Date.now() - startTime < timeout) {
-    const runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
-    
-    if (runStatus.status === 'completed') {
-      return;
-    }
-    
-    if (runStatus.status === 'failed' || runStatus.status === 'cancelled') {
-      throw new Error(`Run failed: ${runStatus.status} - ${runStatus.last_error?.message || 'Unknown error'}`);
-    }
-    
-    // Wait before checking again
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  
-  throw new Error('Run timeout exceeded');
-}
 
 // Initialize queue processors
 async function initializeQueueProcessors() {
@@ -61,45 +40,31 @@ async function initializeQueueProcessors() {
           return cachedResponse;
         }
 
-        // Use existing thread or create a new one
-        const newThreadId = threadId || (await openai.beta.threads.create()).id;
-        
-        // Get the latest user message
-        const latestMessage = messages[messages.length - 1];
-        if (latestMessage.role !== 'user') {
-          throw new Error('Last message must be from user');
-        }
+        // Format messages for GPT API
+        const formattedMessages = [
+          {
+            role: 'system',
+            content: corporate
+          },
+          ...messages.map((msg: { role: string; content: string }) => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        ];
 
-        // Add JSON instruction to the user's message
-        const template = 'Please respond in JSON format: {"response": "<response here>"}';
-        const messageContent = `${latestMessage.content} ${template}`;
-
-        // Add the user's message to the thread
-        await openai.beta.threads.messages.create(newThreadId, {
-          role: 'user',
-          content: messageContent,
+        // Use OpenAI GPT API instead of Assistant API
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
         });
 
-        // Create a run
-        const run = await openai.beta.threads.runs.create(newThreadId, {
-          assistant_id: assistantId,
-        });
-
-        // Wait for the run to complete with timeout
-        await waitForRunCompletion(newThreadId, run.id);
-        
-        // Get the messages
-        const threadMessages = await openai.beta.threads.messages.list(newThreadId);
-        const assistantMessage = threadMessages.data[0];
-        const content = assistantMessage.content[0];
-
-        // Parse the response
-        const assistantResponse = 'text' in content ? content.text.value : '';
-        const assistantResponseObj = JSON.parse(assistantResponse);
+        const responseText = completion.choices[0]?.message?.content || 'No response generated';
 
         const response = {
-          response: assistantResponseObj.response,
-          threadId: newThreadId,
+          response: responseText,
+          threadId: threadId || 'gpt-api',
           requestId,
         };
 
@@ -140,80 +105,94 @@ async function initializeQueueProcessors() {
       }
     });
 
-    // Process large analysis requests
+    // Process large requests
     largeRequestsQueue.process(JOB_TYPES.LARGE_ANALYSIS, async (job) => {
-      const { requestId } = job.data;
+      const { data, requestId } = job.data;
       
-      console.log(`Processing large analysis ${requestId}`);
+      console.log(`Processing large request ${requestId}`);
       
       try {
-        // Simulate heavy processing
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        // Simulate processing large requests
+        await new Promise(resolve => setTimeout(resolve, 5000));
         
-        const result = {
-          analysis: "Complex analysis result",
-          insights: ["Insight 1", "Insight 2", "Insight 3"],
-          requestId,
-        };
-
-        console.log(`Large analysis ${requestId} completed successfully`);
-        return result;
+        console.log(`Large request ${requestId} completed successfully`);
+        return { success: true, requestId };
 
       } catch (error) {
-        console.error(`Large analysis ${requestId} failed:`, error);
+        console.error(`Large request ${requestId} failed:`, error);
         throw error;
       }
     });
 
-    // Process analytics events
+    // Process analytics
     analyticsQueue.process(JOB_TYPES.ANALYTICS_EVENT, async (job) => {
-      const { event, data, timestamp } = job.data;
+      const { event, data, requestId } = job.data;
       
-      console.log(`Processing analytics event: ${event}`);
+      console.log(`Processing analytics ${requestId}`);
       
       try {
-        // Here you would implement analytics processing
-        // For now, we'll just log the event
-        console.log('Analytics event processed:', { event, data, timestamp });
+        // Simulate analytics processing
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        return { success: true, event, timestamp };
+        console.log(`Analytics ${requestId} completed successfully`);
+        return { success: true, event, requestId };
 
       } catch (error) {
-        console.error(`Analytics event ${event} failed:`, error);
+        console.error(`Analytics ${requestId} failed:`, error);
         throw error;
       }
     });
 
-    console.log('Queue processors initialized successfully');
+    console.log('✅ All queue processors initialized successfully');
+
   } catch (error) {
-    console.error('Failed to initialize queue processors:', error);
+    console.error('❌ Failed to initialize queue processors:', error);
     throw error;
   }
 }
 
-// Graceful shutdown handling
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  await closeRedis();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  await closeRedis();
-  process.exit(0);
-});
-
-// Initialize Redis and start processing
-async function startWorker() {
+// Initialize Redis and queue processors
+async function initialize() {
   try {
+    console.log('🚀 Initializing queue worker...');
+    
+    // Initialize Redis
     await initRedis();
+    console.log('✅ Redis initialized');
+    
+    // Initialize queue processors
     await initializeQueueProcessors();
-    console.log('Queue worker started successfully');
+    console.log('✅ Queue processors initialized');
+    
+    console.log('🎉 Queue worker ready!');
+    
   } catch (error) {
-    console.error('Failed to start worker:', error);
+    console.error('❌ Failed to initialize queue worker:', error);
     process.exit(1);
   }
 }
 
-startWorker();
+// Handle graceful shutdown
+async function shutdown() {
+  console.log('🛑 Shutting down queue worker...');
+  
+  try {
+    await closeRedis();
+    console.log('✅ Redis connection closed');
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Handle process signals
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// Start the worker
+initialize().catch((error) => {
+  console.error('❌ Failed to start queue worker:', error);
+  process.exit(1);
+});

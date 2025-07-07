@@ -18,14 +18,32 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock user for when authentication is disabled
+const mockUser = {
+  id: 'mock-user-id',
+  email: 'test@example.com',
+  name: 'Test User',
+  avatar_url: undefined,
+  provider: 'mock',
+  created_at: new Date().toISOString(),
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // Check if user authentication is enabled (only when USER_AUTH=true)
+  const isUserAuthEnabled = process.env.NEXT_PUBLIC_USER_AUTH === 'true';
+
   const [state, setState] = useState<AuthState>({
-    user: null,
-    loading: true,
+    user: isUserAuthEnabled ? null : mockUser,
+    loading: isUserAuthEnabled, // Only show loading if auth is enabled
     error: null,
   });
 
   const refreshUser = async () => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      return;
+    }
+
     try {
       const { user, error } = await getCurrentUser();
       setState(prev => ({
@@ -45,6 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (data: SignUpData) => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -66,6 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (data: SignInData) => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -87,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleGoogleSignIn = async () => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -107,6 +143,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleGitHubSignIn = async () => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -127,6 +169,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true }));
     
     try {
@@ -148,6 +196,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleResetPassword = async (email: string) => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -169,6 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleUpdatePassword = async (password: string) => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -190,6 +250,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleUpdateProfile = async (data: { name?: string; avatar_url?: string }) => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      toast.info('Authentication is disabled for testing');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
@@ -211,6 +277,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Skip if auth is not enabled
+    if (!isUserAuthEnabled) {
+      return;
+    }
+
     // Get initial user state
     refreshUser();
 
@@ -226,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isUserAuthEnabled]);
 
   const value: AuthContextType = {
     ...state,

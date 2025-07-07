@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai';
 import { RequestQueue, type QueueItem, type QueueConfig } from './queue';
 import { responseCache, generateCacheKey } from './cache';
+import { corporate } from './system-prompt';
 
 // Import the ChatMessage type from cache
 interface ChatMessage {
@@ -63,45 +64,31 @@ class OpenAIQueue extends RequestQueue<OpenAIRequest> {
     }
 
     try {
-      // Use existing thread or create a new one
-      const threadId = request.threadId || (await this.openai.beta.threads.create()).id;
-      
-      // Get the latest user message
-      const latestMessage = request.messages[request.messages.length - 1];
-      if (latestMessage.role !== 'user') {
-        throw new Error('Last message must be from user');
-      }
+      // Format messages for GPT API
+      const formattedMessages = [
+        {
+          role: 'system' as const,
+          content: corporate
+        },
+        ...request.messages.map((msg: { role: string; content: string }) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        }))
+      ];
 
-      // Add JSON instruction to the user's message
-      const template = 'Please respond in JSON format: {"response": "<response here>"}';
-      const messageContent = `${latestMessage.content} ${template}`;
-
-      // Add the user's message to the thread
-      await this.openai.beta.threads.messages.create(threadId, {
-        role: 'user',
-        content: messageContent,
+      // Use OpenAI GPT API instead of Assistant API
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 1000,
       });
 
-      // Create a run
-      const run = await this.openai.beta.threads.runs.create(threadId, {
-        assistant_id: request.assistantId,
-      });
-
-      // Wait for the run to complete with timeout
-      await this.waitForRunCompletion(threadId, run.id);
-      
-      // Get the messages
-      const threadMessages = await this.openai.beta.threads.messages.list(threadId);
-      const assistantMessage = threadMessages.data[0];
-      const content = assistantMessage.content[0];
-
-      // Parse the response
-      const assistantResponse = 'text' in content ? content.text.value : '';
-      const assistantResponseObj = JSON.parse(assistantResponse);
+      const responseText = completion.choices[0]?.message?.content || 'No response generated';
 
       const response: OpenAIResponse = {
-        response: assistantResponseObj.response,
-        threadId,
+        response: responseText,
+        threadId: request.threadId || 'gpt-api',
       };
 
       // Cache the response
@@ -113,27 +100,6 @@ class OpenAIQueue extends RequestQueue<OpenAIRequest> {
       console.error('OpenAI request failed:', error);
       throw error;
     }
-  }
-
-  private async waitForRunCompletion(threadId: string, runId: string, timeout: number = 30000): Promise<void> {
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < timeout) {
-      const runStatus = await this.openai.beta.threads.runs.retrieve(threadId, runId);
-      
-      if (runStatus.status === 'completed') {
-        return;
-      }
-      
-      if (runStatus.status === 'failed' || runStatus.status === 'cancelled') {
-        throw new Error(`Run failed: ${runStatus.status} - ${runStatus.last_error?.message || 'Unknown error'}`);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    throw new Error('Run timeout exceeded');
   }
 }
 
