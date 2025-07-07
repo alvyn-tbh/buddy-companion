@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { AuthState, signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithGitHub, signOut, getCurrentUser, onAuthStateChange, resetPassword, updatePassword, updateProfile, SignUpData, SignInData } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
   });
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     // Skip if auth is not enabled
     if (!isUserAuthEnabled) {
       return;
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading: false,
       }));
     }
-  };
+  }, [isUserAuthEnabled]);
 
   const signUp = async (data: SignUpData) => {
     // Skip if auth is not enabled
@@ -297,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [isUserAuthEnabled]);
+  }, [isUserAuthEnabled, refreshUser]);
 
   const value: AuthContextType = {
     ...state,

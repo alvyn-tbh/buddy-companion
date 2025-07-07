@@ -107,7 +107,7 @@ async function initializeQueueProcessors() {
 
     // Process large requests
     largeRequestsQueue.process(JOB_TYPES.LARGE_ANALYSIS, async (job) => {
-      const { data, requestId } = job.data;
+      const { requestId } = job.data;
       
       console.log(`Processing large request ${requestId}`);
       
@@ -126,7 +126,7 @@ async function initializeQueueProcessors() {
 
     // Process analytics
     analyticsQueue.process(JOB_TYPES.ANALYTICS_EVENT, async (job) => {
-      const { event, data, requestId } = job.data;
+      const { event, requestId } = job.data;
       
       console.log(`Processing analytics ${requestId}`);
       
