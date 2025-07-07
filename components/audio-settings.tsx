@@ -17,7 +17,7 @@ interface AudioSettingsProps {
   className?: string;
 }
 
-export function AudioSettings({ 
+export function AudioSettings({
   isAudioEnabled, 
   onAudioToggle, 
   onTTSModelChange,
