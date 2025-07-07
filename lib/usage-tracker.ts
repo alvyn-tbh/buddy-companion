@@ -119,12 +119,7 @@ export class UsageTracker {
   /**
    * Get usage statistics
    */
-  async getUsageStats(_options: {
-    startDate?: Date;
-    endDate?: Date;
-    userId?: string;
-    apiType?: string;
-  } = {}): Promise<{
+  async getUsageStats(): Promise<{
     totalCost: number;
     usageByType: Record<string, number>;
     usageByUser: Record<string, number>;
@@ -157,18 +152,25 @@ export class UsageTracker {
         };
       }
 
-      const totalCost = usageData.reduce((sum: number, item: any) => sum + Number(item.usage_dollars), 0);
-      const usageByType = usageData.reduce((acc: Record<string, number>, item: any) => {
+      interface UsageRecord {
+        usage_dollars: number;
+        api_type: string;
+        user_id: string;
+        created_at: string;
+      }
+
+      const totalCost = usageData.reduce((sum: number, item: UsageRecord) => sum + Number(item.usage_dollars), 0);
+      const usageByType = usageData.reduce((acc: Record<string, number>, item: UsageRecord) => {
         acc[item.api_type] = (acc[item.api_type] || 0) + Number(item.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
-      const usageByUser = usageData.reduce((acc: Record<string, number>, item: any) => {
+      const usageByUser = usageData.reduce((acc: Record<string, number>, item: UsageRecord) => {
         const userId = item.user_id || 'unknown';
         acc[userId] = (acc[userId] || 0) + Number(item.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
 
-      const dailyUsage = usageData.reduce((acc: Record<string, number>, item: any) => {
+      const dailyUsage = usageData.reduce((acc: Record<string, number>, item: UsageRecord) => {
         const date = new Date(item.created_at).toISOString().split('T')[0];
         acc[date] = (acc[date] || 0) + Number(item.usage_dollars);
         return acc;

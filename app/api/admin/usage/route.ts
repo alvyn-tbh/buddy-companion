@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const userId = searchParams.get('userId');
+    // const userId = searchParams.get('userId');
 
     // Parse dates
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
@@ -40,18 +40,10 @@ export async function GET(request: NextRequest) {
     console.log('Fetching usage stats for period:', { start, end, previousStart, previousEnd });
 
     // Get current period stats
-    const currentStats = await usageTracker.getUsageStats({
-      startDate: start,
-      endDate: end,
-      userId: userId || undefined,
-    });
+    const currentStats = await usageTracker.getUsageStats();
 
     // Get previous period stats for comparison
-    const previousStats = await usageTracker.getUsageStats({
-      startDate: previousStart,
-      endDate: previousEnd,
-      userId: userId || undefined,
-    });
+    const previousStats = await usageTracker.getUsageStats();
 
     console.log('Usage stats fetched successfully');
 
