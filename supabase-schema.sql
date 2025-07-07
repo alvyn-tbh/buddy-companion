@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS database_metrics (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create usage tracking table
+CREATE TABLE IF NOT EXISTS api_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  usage_dollars DECIMAL(10,6) NOT NULL,
+  api_type TEXT NOT NULL CHECK (api_type IN ('speech', 'text', 'tts', 'transcription')),
+  model TEXT,
+  tokens_used INTEGER,
+  request_id TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_engagement_metrics_visitor_id ON engagement_metrics(visitor_id);
 CREATE INDEX IF NOT EXISTS idx_engagement_metrics_session_id ON engagement_metrics(session_id);
@@ -39,6 +53,10 @@ CREATE INDEX IF NOT EXISTS idx_engagement_metrics_created_at ON engagement_metri
 CREATE INDEX IF NOT EXISTS idx_database_metrics_environment ON database_metrics(environment);
 CREATE INDEX IF NOT EXISTS idx_database_metrics_timestamp ON database_metrics(timestamp);
 CREATE INDEX IF NOT EXISTS idx_database_metrics_created_at ON database_metrics(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_api_usage_user_id ON api_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp ON api_usage(timestamp);
+CREATE INDEX IF NOT EXISTS idx_api_usage_api_type ON api_usage(api_type);
 
 -- Create a function to get engagement analytics
 CREATE OR REPLACE FUNCTION get_engagement_analytics(
@@ -164,6 +182,7 @@ $$ LANGUAGE plpgsql;
 -- Enable Row Level Security (RLS)
 ALTER TABLE engagement_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE database_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for admin access (you'll need to implement proper authentication)
 CREATE POLICY "Allow admin read access to engagement_metrics" ON engagement_metrics
@@ -177,3 +196,20 @@ CREATE POLICY "Allow admin insert access to engagement_metrics" ON engagement_me
 
 CREATE POLICY "Allow admin insert access to database_metrics" ON database_metrics
     FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can view their own usage" ON api_usage
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all usage" ON api_usage
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM auth.users 
+      WHERE auth.users.id = auth.uid() 
+      AND auth.users.email IN (
+        SELECT email FROM auth.users WHERE email = auth.users.email
+      )
+    )
+  );
+
+CREATE POLICY "Service can insert usage" ON api_usage
+  FOR INSERT WITH CHECK (true);
