@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
+import { corporate } from '@/lib/system-prompt';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     const session = await openai.beta.realtime.sessions.create({
       model: model || 'gpt-4o-realtime-preview-2024-12-17',
       voice: voice || 'alloy',
-      instructions: instructions || "You are a helpful AI assistant. Respond naturally and conversationally to user input.",
+      instructions: instructions || corporate,
     });
 
     console.log('Realtime session created successfully');
