@@ -184,32 +184,21 @@ ALTER TABLE engagement_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE database_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
 
--- Create policies for admin access (you'll need to implement proper authentication)
-CREATE POLICY "Allow admin read access to engagement_metrics" ON engagement_metrics
-    FOR SELECT USING (true);
+-- Create more permissive policies for admin access
+CREATE POLICY "Allow all access to engagement_metrics" ON engagement_metrics
+    FOR ALL USING (true);
 
-CREATE POLICY "Allow admin read access to database_metrics" ON database_metrics
-    FOR SELECT USING (true);
+CREATE POLICY "Allow all access to database_metrics" ON database_metrics
+    FOR ALL USING (true);
 
-CREATE POLICY "Allow admin insert access to engagement_metrics" ON engagement_metrics
-    FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all access to api_usage" ON api_usage
+    FOR ALL USING (true);
 
-CREATE POLICY "Allow admin insert access to database_metrics" ON database_metrics
-    FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Users can view their own usage" ON api_usage
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all usage" ON api_usage
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM auth.users 
-      WHERE auth.users.id = auth.uid() 
-      AND auth.users.email IN (
-        SELECT email FROM auth.users WHERE email = auth.users.email
-      )
-    )
-  );
-
-CREATE POLICY "Service can insert usage" ON api_usage
-  FOR INSERT WITH CHECK (true);
+-- Drop the restrictive policies if they exist
+DROP POLICY IF EXISTS "Allow admin read access to engagement_metrics" ON engagement_metrics;
+DROP POLICY IF EXISTS "Allow admin read access to database_metrics" ON database_metrics;
+DROP POLICY IF EXISTS "Allow admin insert access to engagement_metrics" ON engagement_metrics;
+DROP POLICY IF EXISTS "Allow admin insert access to database_metrics" ON database_metrics;
+DROP POLICY IF EXISTS "Users can view their own usage" ON api_usage;
+DROP POLICY IF EXISTS "Admins can view all usage" ON api_usage;
+DROP POLICY IF EXISTS "Service can insert usage" ON api_usage;
