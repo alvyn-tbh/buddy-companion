@@ -73,12 +73,35 @@ export default function Chat(props: {
       },
       onError: (error) => {
         console.error('Chat error:', error);
-        toast.error(
-          error.message.length > 0
-            ? error.message
-            : "An error occurred, please try again later.",
-          { position: "top-center", richColors: true },
-        );
+        
+        // Check if it's a rate limit error
+        const errorMessage = error.message || '';
+        const isRateLimitError = errorMessage.includes('rate limit') || 
+                                errorMessage.includes('quota') || 
+                                errorMessage.includes('exceeded');
+        
+        if (isRateLimitError) {
+          toast.error(
+            "OpenAI API Rate Limit Exceeded",
+            {
+              position: "top-center",
+              richColors: true,
+              description: "You have exceeded your current quota. Please check your plan and billing details.",
+              duration: 10000, // Show for 10 seconds
+              action: {
+                label: "Learn More",
+                onClick: () => window.open("https://platform.openai.com/docs/guides/error-codes/api-errors", "_blank")
+              }
+            }
+          );
+        } else {
+          toast.error(
+            errorMessage.length > 0
+              ? errorMessage
+              : "An error occurred, please try again later.",
+            { position: "top-center", richColors: true },
+          );
+        }
       },
     });
 
