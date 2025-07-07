@@ -8,6 +8,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -30,6 +31,12 @@ export function AdminNav({ onLogout }: AdminNavProps) {
       label: 'Analytics',
       icon: BarChart3,
       description: 'Visitor and engagement metrics'
+    },
+    {
+      href: '/admin/usage',
+      label: 'Usage',
+      icon: DollarSign,
+      description: 'API usage and costs'
     },
     {
       href: '/admin/queue',
