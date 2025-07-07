@@ -36,13 +36,6 @@ export default function Chat(props: {
     setVoice(newVoice);
   };
 
-  // Use corporate TTS config if provided, otherwise use defaults
-  const ttsConfig = props.ttsConfig || {
-    defaultVoice: 'alloy' as const,
-    speed: 1.0,
-    autoPlay: true
-  };
-
   const { messages, input, handleInputChange: chatHandleInputChange, handleSubmit, status, stop, setInput } =
     useChat({
       api: `${props.api}`,

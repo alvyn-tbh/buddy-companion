@@ -21,8 +21,6 @@ const OPENAI_PRICING = {
   'dall-e-2': { input: 0.02 },
 } as const;
 
-type PricingModel = typeof OPENAI_PRICING[keyof typeof OPENAI_PRICING];
-
 export interface UsageData {
   user_id?: string;
   api_type: 'speech' | 'text' | 'tts' | 'transcription';
@@ -32,7 +30,7 @@ export interface UsageData {
   minutes_used?: number;
   images_used?: number;
   request_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class UsageTracker {
@@ -163,14 +161,14 @@ export class UsageTracker {
       }
 
       // Calculate statistics
-      const totalCost = data.reduce((sum: number, record: any) => sum + Number(record.usage_dollars), 0);
+      const totalCost = data.reduce((sum: number, record: { usage_dollars: number }) => sum + Number(record.usage_dollars), 0);
       
-      const usageByType = data.reduce((acc: Record<string, number>, record: any) => {
+      const usageByType = data.reduce((acc: Record<string, number>, record: { api_type: string; usage_dollars: number }) => {
         acc[record.api_type] = (acc[record.api_type] || 0) + Number(record.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
 
-      const usageByUser = data.reduce((acc: Record<string, number>, record: any) => {
+      const usageByUser = data.reduce((acc: Record<string, number>, record: { user_id: string; usage_dollars: number }) => {
         if (record.user_id) {
           acc[record.user_id] = (acc[record.user_id] || 0) + Number(record.usage_dollars);
         }
@@ -178,14 +176,14 @@ export class UsageTracker {
       }, {} as Record<string, number>);
 
       // Group by day
-      const dailyUsage = data.reduce((acc: Record<string, number>, record: any) => {
+      const dailyUsage = data.reduce((acc: Record<string, number>, record: { timestamp: string; usage_dollars: number }) => {
         const date = new Date(record.timestamp).toISOString().split('T')[0];
         acc[date] = (acc[date] || 0) + Number(record.usage_dollars);
         return acc;
       }, {} as Record<string, number>);
 
       const dailyUsageArray = Object.entries(dailyUsage)
-        .map(([date, cost]) => ({ date, cost }))
+        .map(([date, cost]) => ({ date, cost: cost as number }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
       return {

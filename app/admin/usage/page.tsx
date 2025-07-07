@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, DollarSign, Users, Activity, TrendingUp, TrendingDown } from 'lucide-react';
@@ -29,11 +28,7 @@ export default function UsageDashboard() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [previousStats, setPreviousStats] = useState<UsageStats | null>(null);
 
-  useEffect(() => {
-    fetchUsageStats();
-  }, [timeRange, selectedUser]);
-
-  const fetchUsageStats = async () => {
+  const fetchUsageStats = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -79,7 +74,11 @@ export default function UsageDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, selectedUser, users.length]);
+
+  useEffect(() => {
+    fetchUsageStats();
+  }, [fetchUsageStats]);
 
   const calculatePercentageChange = (current: number, previous: number): number => {
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -279,7 +278,7 @@ export default function UsageDashboard() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-end space-x-1">
-            {stats?.dailyUsage.map((day, index) => {
+            {stats?.dailyUsage.map((day) => {
               const maxCost = Math.max(...stats.dailyUsage.map(d => d.cost));
               const height = maxCost > 0 ? (day.cost / maxCost) * 100 : 0;
               
