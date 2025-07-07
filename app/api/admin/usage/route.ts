@@ -7,21 +7,38 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     
     // Check if user is admin
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error('Auth error:', authError);
+      return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
+    }
+    
     if (!user) {
+      console.log('No user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('User found:', user.email);
+
     // Check if user is admin (you can implement your own admin check)
-    const { data: adminCheck } = await supabase
+    const { data: adminCheck, error: adminError } = await supabase
       .from('admin_users')
       .select('email')
       .eq('email', user.email)
       .single();
 
+    if (adminError) {
+      console.error('Admin check error:', adminError);
+      return NextResponse.json({ error: 'Admin check failed' }, { status: 403 });
+    }
+
     if (!adminCheck) {
+      console.log('User not found in admin_users table:', user.email);
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
+
+    console.log('Admin access granted for:', user.email);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -37,6 +54,8 @@ export async function GET(request: NextRequest) {
     const previousStart = new Date(start.getTime() - periodLength);
     const previousEnd = new Date(start.getTime());
 
+    console.log('Fetching usage stats for period:', { start, end, previousStart, previousEnd });
+
     // Get current period stats
     const currentStats = await usageTracker.getUsageStats({
       startDate: start,
@@ -51,6 +70,8 @@ export async function GET(request: NextRequest) {
       userId: userId || undefined,
     });
 
+    console.log('Usage stats fetched successfully');
+
     return NextResponse.json({
       current: currentStats,
       previous: previousStats,
@@ -59,7 +80,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching usage stats:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch usage statistics' },
+      { error: 'Failed to fetch usage statistics', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
