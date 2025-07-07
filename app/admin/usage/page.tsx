@@ -50,7 +50,7 @@ export default function UsageDashboard() {
           break;
       }
 
-      const response = await fetch(`/api/admin/usage?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&userId=${selectedUser !== 'all' ? selectedUser : ''}`);
+      const response = await fetch(`/api/admin/usage/test?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&userId=${selectedUser !== 'all' ? selectedUser : ''}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch usage stats');
@@ -62,7 +62,7 @@ export default function UsageDashboard() {
       
       // Fetch users if not already loaded
       if (users.length === 0) {
-        const usersResponse = await fetch('/api/admin/users');
+        const usersResponse = await fetch('/api/admin/users/test');
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           setUsers(usersData);
