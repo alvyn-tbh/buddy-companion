@@ -10,7 +10,7 @@ export default function LandingPage() {
   const { user } = useAuth();
 
   return (
-    <div className="h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-800 relative overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-800 relative overflow-hidden flex flex-col">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
@@ -22,7 +22,7 @@ export default function LandingPage() {
       <Header title="Buddy AI | Corporate Wellness" chat_url="/corporate/chat" features_url="/corporate/features" how_it_works_url="/corporate/how-it-works" />
 
       {/* Main Section */}
-      <main className="flex-1 pt-8 pb-0 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 pt-8 pb-0 px-2 sm:px-6 lg:px-8 w-full">
         <div className="max-w-7xl mx-auto h-full flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -79,15 +79,13 @@ export default function LandingPage() {
             className="mt-12 text-center"
           >
             {user ? (
-              // User is authenticated - show chat button
               <Link
                 href="/corporate/chat"
-                className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-10 rounded-full text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="inline-block w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 px-10 rounded-full text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
               >
                 Start Your Journey →
               </Link>
             ) : (
-              // User is not authenticated - show sign in prompt
               <div className="space-y-4">
                 <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl max-w-md mx-auto">
                   <div className="text-amber-600 text-2xl mb-2">🔒</div>
@@ -97,7 +95,7 @@ export default function LandingPage() {
                   </p>
                   <Link
                     href="/auth"
-                    className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-8 rounded-full text-base hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                    className="inline-block w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-8 rounded-full text-base hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                   >
                     Sign In to Continue
                   </Link>

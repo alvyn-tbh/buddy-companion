@@ -45,39 +45,38 @@ export default function SubHeader(props: {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 w-full">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="flex justify-between items-center h-16 w-full">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <Link href="/" className="flex-shrink-0 min-w-0">
+            <span className="text-lg xs:text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate block max-w-[60vw] xs:max-w-[70vw]">
               {props.title}
             </span>
           </Link>
           
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             {/* Main Navigation Links */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 lg:space-x-4">
               <Link 
                 href={props.features_url} 
-                className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-600 hover:text-indigo-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Features
               </Link>
               <Link 
                 href={props.how_it_works_url} 
-                className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-600 hover:text-indigo-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 How it works
               </Link>
-              
               {/* Services Dropdown */}
               <div className="relative">
                 <button
                   ref={buttonRef}
                   onClick={() => setDropdownOpen(!isDropdownOpen)}
-                  className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1"
+                  className="text-gray-600 hover:text-indigo-600 px-2 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1"
                 >
                   Services
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +103,6 @@ export default function SubHeader(props: {
                 )}
               </div>
             </div>
-
             {/* Audio Settings */}
             {props.isAudioEnabled !== undefined && props.onAudioToggle && (
               <AudioSettings 
@@ -112,18 +110,17 @@ export default function SubHeader(props: {
                 onAudioToggle={props.onAudioToggle}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
+                className="ml-2"
               />
             )}
-
             {/* User Profile / Login Button */}
-            <div className="ml-4">
+            <div className="ml-2 lg:ml-4">
               <UserProfile />
             </div>
-
             {/* Try Now Button */}
             <Link 
               href={props.chat_url} 
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
             >
               Try Now
             </Link>
@@ -138,19 +135,20 @@ export default function SubHeader(props: {
                 onAudioToggle={props.onAudioToggle}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
+                className="mr-1"
               />
             )}
-            
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMobileMenu}
-              className="h-8 w-8"
+              className="h-10 w-10 flex items-center justify-center"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
               )}
             </Button>
           </div>
@@ -158,26 +156,25 @@ export default function SubHeader(props: {
 
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+          <div className="md:hidden border-t border-gray-200 bg-white w-full animate-fade-in-down shadow-lg rounded-b-xl overflow-x-auto">
+            <div className="px-2 pt-2 pb-3 space-y-1 max-h-[80vh] overflow-y-auto">
               <Link 
                 href={props.features_url} 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
+                className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Features
               </Link>
               <Link 
                 href={props.how_it_works_url} 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
+                className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 How it works
               </Link>
-              
               {/* Mobile Services Section */}
               <div className="px-3 py-2">
-                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Services
                 </div>
                 <div className="space-y-1">
@@ -211,17 +208,15 @@ export default function SubHeader(props: {
                   </Link>
                 </div>
               </div>
-
               {/* Mobile User Profile */}
               <div className="border-t border-gray-200 pt-4">
                 <UserProfile />
               </div>
-
               {/* Mobile Try Now Button */}
               <div className="pt-4">
                 <Link 
                   href={props.chat_url} 
-                  className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium text-center hover:shadow-lg transition-all duration-300"
+                  className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-full text-base font-medium text-center hover:shadow-lg transition-all duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Try Now

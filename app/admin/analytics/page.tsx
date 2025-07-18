@@ -96,23 +96,23 @@ export default function AnalyticsDashboard() {
     <div className="min-h-screen bg-gray-50">
       <AdminNav onLogout={handleLogout} />
       
-      <div className="p-6">
+      <div className="p-4 sm:p-6 max-w-full">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <BarChart3 className="h-8 w-8 text-blue-600" />
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                <p className="text-gray-600">Visitor metrics and engagement analytics</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                <p className="text-gray-600 text-sm sm:text-base">Visitor metrics and engagement analytics</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <select
                   value={environment}
                   onChange={(e) => setEnvironment(e.target.value as 'dev' | 'prod')}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm w-full sm:w-auto"
                 >
                   <option value="prod">Production</option>
                   <option value="dev">Development</option>
@@ -120,14 +120,14 @@ export default function AnalyticsDashboard() {
                 <select
                   value={timeRange}
                   onChange={(e) => setTimeRange(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm w-full sm:w-auto"
                 >
                   <option value={7}>Last 7 days</option>
                   <option value={30}>Last 30 days</option>
                   <option value={90}>Last 90 days</option>
                 </select>
               </div>
-              <Button onClick={fetchEngagementData} disabled={loading} size="sm">
+              <Button onClick={fetchEngagementData} disabled={loading} size="sm" className="w-full sm:w-auto">
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -136,7 +136,7 @@ export default function AnalyticsDashboard() {
           
           {/* Visitor Metrics */}
           {engagementData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <Users className="h-8 w-8 text-blue-600" />
@@ -185,7 +185,7 @@ export default function AnalyticsDashboard() {
           
           {/* Additional Metrics */}
           {engagementData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3 mb-4">
                   <Target className="h-6 w-6 text-blue-600" />
@@ -220,12 +220,12 @@ export default function AnalyticsDashboard() {
           
           {/* Service Usage Breakdown */}
           {engagementData?.service_usage && (
-            <div className="bg-white p-6 rounded-lg border">
+            <div className="bg-white p-4 sm:p-6 rounded-lg border overflow-x-auto">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <PieChart className="h-5 w-5" />
                 Service Usage Breakdown
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 min-w-[320px]">
                 {Object.entries(engagementData.service_usage).map(([service, count]) => (
                   <div key={service} className="text-center p-4 bg-gray-50 rounded-lg">
                     <p className="font-semibold text-sm capitalize">{service.replace(/_/g, ' ')}</p>
@@ -241,13 +241,13 @@ export default function AnalyticsDashboard() {
           
           {/* Daily Visitors Chart */}
           {engagementData?.daily_visitors && (
-            <div className="bg-white p-6 rounded-lg border">
+            <div className="bg-white p-4 sm:p-6 rounded-lg border overflow-x-auto">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Daily Visitor Trends
               </h3>
               <div className="overflow-x-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 min-w-[320px]">
                   {Object.entries(engagementData.daily_visitors)
                     .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                     .slice(0, 12)

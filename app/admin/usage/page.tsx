@@ -129,15 +129,15 @@ export default function UsageDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav onLogout={handleLogout} />
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="container mx-auto p-6 space-y-6 max-w-full px-2 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Usage Dashboard</h1>
-            <p className="text-gray-600">Monitor API usage and costs</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Usage Dashboard</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Monitor API usage and costs</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -147,9 +147,8 @@ export default function UsageDashboard() {
                 <SelectItem value="1y">Last year</SelectItem>
               </SelectContent>
             </Select>
-            
             <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="All users" />
               </SelectTrigger>
               <SelectContent>
@@ -165,7 +164,7 @@ export default function UsageDashboard() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
@@ -228,7 +227,7 @@ export default function UsageDashboard() {
         </div>
 
         {/* Usage by Type */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Usage by API Type</CardTitle>
@@ -291,13 +290,12 @@ export default function UsageDashboard() {
             <CardDescription>Cost over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-end space-x-1">
+            <div className="h-64 flex items-end space-x-1 overflow-x-auto">
               {stats?.dailyUsage.map((day) => {
                 const maxCost = Math.max(...stats.dailyUsage.map(d => d.cost));
                 const height = maxCost > 0 ? (day.cost / maxCost) * 100 : 0;
-                
                 return (
-                  <div key={day.date} className="flex-1 flex flex-col items-center">
+                  <div key={day.date} className="flex-1 min-w-[40px] flex flex-col items-center">
                     <div 
                       className="w-full bg-blue-500 rounded-t"
                       style={{ height: `${height}%` }}

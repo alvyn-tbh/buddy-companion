@@ -9,12 +9,12 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
       <Header title="Buddy AI | Corporate Wellness" chat_url="/corporate/chat" features_url="/corporate/features" how_it_works_url="/corporate/how-it-works" />
 
-      <div className="flex-1">
+      <div className="flex-1 w-full">
         {/* What It Is Section */}
-        <section className="pt-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <section className="pt-24 px-2 xs:px-4 sm:px-6 lg:px-8 relative overflow-hidden">
           <div className="absolute inset-0 -z-10">
-            <div className="absolute top-20 left-40 w-48 h-48 bg-purple-300/20 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-40 right-40 w-48 h-48 bg-indigo-300/20 rounded-full blur-3xl animate-float-delayed" />
+            <div className="absolute top-20 left-10 xs:left-20 sm:left-40 w-32 xs:w-40 h-32 xs:h-40 bg-purple-300/20 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-20 right-10 xs:right-20 sm:right-40 w-32 xs:w-40 h-32 xs:h-40 bg-indigo-300/20 rounded-full blur-3xl animate-float-delayed" />
           </div>
           <div className="max-w-3xl mx-auto">
             <motion.div
@@ -22,10 +22,10 @@ export default function FeaturesPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center"
             >
-              <h2 className="text-4xl font-bold mb-6">
+              <h2 className="text-2xl xs:text-3xl sm:text-4xl font-bold mb-4 sm:mb-6">
                 <span>💡</span> <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">What It Is</span>
               </h2>
-              <p className="text-xl text-gray-600 mb-6 leading-relaxed">
+              <p className="text-base xs:text-lg sm:text-xl text-gray-600 mb-4 sm:mb-6 leading-relaxed">
                 Your personal space to process work stress, practice difficult conversations, and find your center — without judgment or pressure.
               </p>
             </motion.div>
@@ -33,26 +33,26 @@ export default function FeaturesPage() {
         </section>
 
         {/* Features Section */}
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 relative overflow-hidden">
+        <section className="py-4 xs:py-6 px-2 xs:px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 relative overflow-hidden">
           <div className="absolute inset-0 -z-10">
-            <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-pink-300/20 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-1/4 right-1/3 w-48 h-48 bg-blue-300/20 rounded-full blur-3xl animate-float-delayed" />
+            <div className="absolute top-1/2 left-1/4 w-32 xs:w-48 h-32 xs:h-48 bg-pink-300/20 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-1/4 right-1/3 w-32 xs:w-48 h-32 xs:h-48 bg-blue-300/20 rounded-full blur-3xl animate-float-delayed" />
           </div>
           <div className="max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
+              className="text-center mb-8 sm:mb-12"
             >
-              <h2 className="text-4xl font-bold mb-4">
+              <h2 className="text-2xl xs:text-3xl sm:text-4xl font-bold mb-2 sm:mb-4">
                 <span>🧭</span> <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Features</span>
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-base xs:text-lg sm:text-xl text-gray-600">
                 When work feels overwhelming, we&apos;re here to help you find clarity and calm.
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-6">
               {[
                 {
                   icon: "🧘",
@@ -81,11 +81,11 @@ export default function FeaturesPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                   whileHover={{ scale: 1.02, y: -5 }}
-                  className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 h-full flex flex-col"
+                  className="bg-white/80 backdrop-blur-sm p-4 xs:p-6 sm:p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 h-full flex flex-col"
                 >
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed flex-1">{feature.description}</p>
+                  <div className="text-3xl xs:text-4xl mb-2 xs:mb-4">{feature.icon}</div>
+                  <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-2 xs:mb-3">{feature.title}</h3>
+                  <p className="text-gray-600 leading-relaxed flex-1 text-sm xs:text-base">{feature.description}</p>
                 </motion.div>
               ))}
             </div>
