@@ -1,4 +1,5 @@
 // Performance monitoring utilities for Core Web Vitals and optimization metrics
+import React from 'react';
 
 export interface PerformanceMetric {
   name: string;
@@ -225,7 +226,7 @@ export function withPerformanceMonitoring<P extends object>(
       endTiming();
     });
 
-    return <MemoizedComponent {...props} ref={ref} />;
+    return React.createElement(MemoizedComponent, { ...props, ref });
   });
 }
 

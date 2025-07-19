@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from '@/lib/hooks/use-auth';
-import { ServiceWorkerProvider } from '@/components/service-worker-provider';
+// import { ServiceWorkerProvider } from '@/components/service-worker-provider';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -96,65 +96,15 @@ export default function RootLayout({
         <link rel="prefetch" href="/emotional" />
         <link rel="prefetch" href="/culture" />
         
-        {/* Performance optimization scripts */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Critical performance measurements
-              window.performanceStart = Date.now();
-              
-              // Preload important resources
-              if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => {
-                  // Preload non-critical resources during idle time
-                  const preloadLinks = ['/api/analytics/track'];
-                  preloadLinks.forEach(href => {
-                    const link = document.createElement('link');
-                    link.rel = 'prefetch';
-                    link.href = href;
-                    document.head.appendChild(link);
-                  });
-                });
-              }
-              
-              // Early error tracking
-              window.addEventListener('error', (e) => {
-                console.error('[Performance] Critical error:', e.error);
-                if (window.gtag) {
-                  gtag('event', 'exception', {
-                    description: e.error.message,
-                    fatal: false
-                  });
-                }
-              });
-              
-              // Track page load performance
-              window.addEventListener('load', () => {
-                if ('performance' in window) {
-                  const loadTime = Date.now() - window.performanceStart;
-                  console.log('[Performance] Page load time:', loadTime + 'ms');
-                  
-                  if (window.gtag) {
-                    gtag('event', 'page_load_time', {
-                      value: loadTime,
-                      custom_parameter: window.location.pathname
-                    });
-                  }
-                }
-              });
-            `,
-          }}
-        />
+        {/* Performance optimization scripts - temporarily disabled for build */}
       </head>
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
-        <ServiceWorkerProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-          <Toaster />
-        </ServiceWorkerProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

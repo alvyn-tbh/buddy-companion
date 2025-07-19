@@ -8,7 +8,7 @@ export const revalidate = 60; // Revalidate every 60 seconds
 
 interface AnalyticsEvent {
   event: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   timestamp: number;
   userId?: string;
   sessionId?: string;
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Add performance headers
     const responseHeaders = new Headers({
       'Content-Type': 'application/json',
-      'X-Edge-Location': request.geo?.country || 'unknown',
+      'X-Edge-Location': (request as any)?.geo?.country || 'unknown',
       'X-Processing-Time': `${Date.now() - startTime}ms`,
       'X-Processed-Events': processed.toString(),
       'Cache-Control': 'no-store', // Don't cache analytics data
@@ -227,14 +227,14 @@ function createStreamingResponse(userId?: string | null, limit: number = 100): R
         controller.enqueue(encoder.encode('data: {"type": "complete"}\n\n'));
         controller.close();
         
-      } catch (error) {
-        const errorChunk = `data: ${JSON.stringify({ 
-          type: 'error', 
-          message: 'Stream error' 
-        })}\n\n`;
-        controller.enqueue(encoder.encode(errorChunk));
-        controller.close();
-      }
+             } catch {
+         const errorChunk = `data: ${JSON.stringify({ 
+           type: 'error', 
+           message: 'Stream error' 
+         })}\n\n`;
+         controller.enqueue(encoder.encode(errorChunk));
+         controller.close();
+       }
     }
   });
   
@@ -251,7 +251,7 @@ function createStreamingResponse(userId?: string | null, limit: number = 100): R
 /**
  * OPTIONS method for CORS support
  */
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, {
     status: 200,
     headers: {

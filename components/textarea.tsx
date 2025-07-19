@@ -4,8 +4,7 @@ import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, MessageCircl
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { toast } from "sonner";
 
-// Lazy load RealtimeWebRTC to reduce initial bundle size
-const RealtimeWebRTCModule = lazy(() => import('../lib/realtime-webrtc').then(mod => ({ default: mod.RealtimeWebRTC })));
+// Note: RealtimeWebRTC is loaded dynamically when needed to reduce initial bundle size
 
 interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;

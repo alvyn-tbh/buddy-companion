@@ -16,17 +16,11 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-slot',
       '@radix-ui/react-tabs',
     ],
-    // Enable server components and other experimental features
-    serverComponentsExternalPackages: ['sharp', 'onnxruntime-node'],
     // Improve build performance
     optimizeCss: true,
-    // Enable partial prerendering for better performance
-    ppr: true,
+    // Note: ppr (partial prerendering) requires Next.js canary version
+    // ppr: true, // Uncomment when upgrading to canary
   },
-
-  // Enable PWA and service worker support
-  // This prepares for offline functionality
-  swcMinify: true,
   
   // Compression for better performance
   compress: true,
