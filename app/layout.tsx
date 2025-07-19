@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from '@/lib/hooks/use-auth';
+import { ServiceWorkerProvider } from '@/components/service-worker-provider';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,15 +19,45 @@ export const metadata: Metadata = {
   keywords: "AI companion, chatbot, emotional support, travel assistant, corporate wellness, cultural communication",
   authors: [{ name: "Buddy AI Team" }],
   robots: "index, follow",
+  manifest: "/manifest.json",
   openGraph: {
     title: "AI Companion Chatbot",
     description: "Your personal AI companion for every side of life",
     type: "website",
+    images: [
+      {
+        url: "/screenshots/desktop-chat.png",
+        width: 1280,
+        height: 720,
+        alt: "AI Companion Chat Interface",
+      }
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "AI Companion Chatbot",
     description: "Your personal AI companion for every side of life",
+    images: ["/screenshots/desktop-chat.png"],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Buddy AI",
+    startupImage: [
+      {
+        url: "/icons/icon-512x512.png",
+        media: "(device-width: 768px) and (device-height: 1024px)",
+      },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "Buddy AI",
+    "application-name": "Buddy AI",
+    "msapplication-TileColor": "#6366f1",
+    "msapplication-config": "/browserconfig.xml",
   },
 };
 
@@ -51,14 +82,79 @@ export default function RootLayout({
         
         {/* Theme color for better PWA experience */}
         <meta name="theme-color" content="#6366f1" />
+        <meta name="msapplication-navbutton-color" content="#6366f1" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        
+        {/* PWA icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="mask-icon" href="/icons/icon-192x192.png" color="#6366f1" />
+        
+        {/* Preload critical routes */}
+        <link rel="prefetch" href="/corporate" />
+        <link rel="prefetch" href="/travel" />
+        <link rel="prefetch" href="/emotional" />
+        <link rel="prefetch" href="/culture" />
+        
+        {/* Performance optimization scripts */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Critical performance measurements
+              window.performanceStart = Date.now();
+              
+              // Preload important resources
+              if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => {
+                  // Preload non-critical resources during idle time
+                  const preloadLinks = ['/api/analytics/track'];
+                  preloadLinks.forEach(href => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = href;
+                    document.head.appendChild(link);
+                  });
+                });
+              }
+              
+              // Early error tracking
+              window.addEventListener('error', (e) => {
+                console.error('[Performance] Critical error:', e.error);
+                if (window.gtag) {
+                  gtag('event', 'exception', {
+                    description: e.error.message,
+                    fatal: false
+                  });
+                }
+              });
+              
+              // Track page load performance
+              window.addEventListener('load', () => {
+                if ('performance' in window) {
+                  const loadTime = Date.now() - window.performanceStart;
+                  console.log('[Performance] Page load time:', loadTime + 'ms');
+                  
+                  if (window.gtag) {
+                    gtag('event', 'page_load_time', {
+                      value: loadTime,
+                      custom_parameter: window.location.pathname
+                    });
+                  }
+                }
+              });
+            `,
+          }}
+        />
       </head>
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-        <Toaster />
+        <ServiceWorkerProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+          <Toaster />
+        </ServiceWorkerProvider>
       </body>
     </html>
   );

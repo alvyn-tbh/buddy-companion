@@ -1,0 +1,140 @@
+{
+  "name": "AI Companion Chatbot",
+  "short_name": "Buddy AI",
+  "description": "Your personal AI companion for every side of life - work stress, travel help, emotional support, and cultural communication.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "lifestyle", "education", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Home screen on mobile"
+    },
+    {
+      "src": "/screenshots/desktop-chat.png", 
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Chat interface on desktop"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Corporate Companion",
+      "short_name": "Work Stress",
+      "description": "Get help with work-related stress and burnout",
+      "url": "/corporate",
+      "icons": [
+        {
+          "src": "/icons/shortcut-corporate.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Travel Companion", 
+      "short_name": "Travel Help",
+      "description": "Get assistance while traveling",
+      "url": "/travel",
+      "icons": [
+        {
+          "src": "/icons/shortcut-travel.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Emotional Support",
+      "short_name": "Emotional",
+      "description": "Get emotional support and understanding",
+      "url": "/emotional",
+      "icons": [
+        {
+          "src": "/icons/shortcut-emotional.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Cultural Communication",
+      "short_name": "Culture",
+      "description": "Learn cultural communication patterns",
+      "url": "/culture",
+      "icons": [
+        {
+          "src": "/icons/shortcut-culture.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "handle_links": "preferred",
+  "capture_links": "existing-client-navigate"
+}
