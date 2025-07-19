@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { corporate } from '@/lib/system-prompt';
 import { usageTracker } from '@/lib/usage-tracker';
 import { createClient } from '@/lib/supabase/server';
+import { corporate as corporateIntro } from '@/lib/system-prompt';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -76,52 +77,12 @@ export async function POST(request: NextRequest) {
       if (!userRole) userRole = extractRole(msg.content);
     }
 
-    // Only ask for missing info if it hasn't been provided in ANY previous user message
-    // Once all info is collected, do not repeat the questions
-    if (!userName) {
-      const askName = "What is your name?";
-      return new Response(
-        `0:"${askName}"\n`,
-        {
-          headers: {
-            'Content-Type': 'text/plain',
-            'X-Thread-Id': existingThreadId || 'gpt-api',
-          },
-        }
-      );
-    }
-    if (userName && !companyName) {
-      const askCompany = `Nice to meet you, ${userName}! What company do you work for?`;
-      return new Response(
-        `0:"${askCompany}"\n`,
-        {
-          headers: {
-            'Content-Type': 'text/plain',
-            'X-Thread-Id': existingThreadId || 'gpt-api',
-          },
-        }
-      );
-    }
-    if (userName && companyName && !userRole) {
-      const askRole = `Thanks! And what is your role at ${companyName}?`;
-      return new Response(
-        `0:"${askRole}"\n`,
-        {
-          headers: {
-            'Content-Type': 'text/plain',
-            'X-Thread-Id': existingThreadId || 'gpt-api',
-          },
-        }
-      );
-    }
-    // If we have all info, do NOT ask again, just continue to normal conversation
-
     // Check if this is the first message (only system message exists)
     const isFirstMessage = messages.length === 1 && messages[0].role === 'system';
     
     if (isFirstMessage) {
       // Send introductory message
-      const introMessage = "I am your corporate wellness companion, designed to support you during emotionally demanding moments at work. I can help you with burnout, decision fatigue, rumination, or personal doubt by offering a calm, thoughtful space for reflection. What is your name, company you are working, and your role?";
+      const introMessage = corporateIntro;
       
       return new Response(
         `0:"${introMessage}"\n`,
