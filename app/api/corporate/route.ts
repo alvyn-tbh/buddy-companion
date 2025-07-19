@@ -39,6 +39,83 @@ export async function POST(request: NextRequest) {
       console.warn('Could not get user for usage tracking:', error);
     }
 
+    // --- Custom follow-up logic for name, company, and role ---
+    // We'll use simple keyword detection for demo purposes
+    // (In production, use NLP or LLM function-calling for more robust extraction)
+    const userMessages = messages.filter(m => m.role === 'user');
+
+    // Helper functions
+    function extractName(text: string) {
+      // Look for "my name is ..." or "I am ..." or "I'm ..."
+      const nameMatch = text.match(/(?:my name is|i am|i\'m|i’m)\s+([A-Za-z ]+)/i);
+      if (nameMatch) return nameMatch[1].trim().split(' ')[0];
+      // Fallback: if user just types a single word
+      if (text.trim().split(' ').length === 1 && text.trim().length > 1) return text.trim();
+      return null;
+    }
+    function extractCompany(text: string) {
+      // Look for "company is ..." or "at ..." or "from ..."
+      const companyMatch = text.match(/(?:company is|at|from)\s+([A-Za-z0-9 &]+)/i);
+      if (companyMatch) return companyMatch[1].trim();
+      return null;
+    }
+    function extractRole(text: string) {
+      // Look for "role is ..." or "I am a ..." or "I work as ..."
+      const roleMatch = text.match(/(?:role is|i am a|i work as|i’m a|i\'m a)\s+([A-Za-z ]+)/i);
+      if (roleMatch) return roleMatch[1].trim();
+      return null;
+    }
+
+    // Track what we have
+    let userName = null;
+    let companyName = null;
+    let userRole = null;
+    for (const msg of userMessages) {
+      if (!userName) userName = extractName(msg.content);
+      if (!companyName) companyName = extractCompany(msg.content);
+      if (!userRole) userRole = extractRole(msg.content);
+    }
+
+    // Only ask for missing info if it hasn't been provided in ANY previous user message
+    // Once all info is collected, do not repeat the questions
+    if (!userName) {
+      const askName = "What is your name?";
+      return new Response(
+        `0:"${askName}"\n`,
+        {
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Thread-Id': existingThreadId || 'gpt-api',
+          },
+        }
+      );
+    }
+    if (userName && !companyName) {
+      const askCompany = `Nice to meet you, ${userName}! What company do you work for?`;
+      return new Response(
+        `0:"${askCompany}"\n`,
+        {
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Thread-Id': existingThreadId || 'gpt-api',
+          },
+        }
+      );
+    }
+    if (userName && companyName && !userRole) {
+      const askRole = `Thanks! And what is your role at ${companyName}?`;
+      return new Response(
+        `0:"${askRole}"\n`,
+        {
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Thread-Id': existingThreadId || 'gpt-api',
+          },
+        }
+      );
+    }
+    // If we have all info, do NOT ask again, just continue to normal conversation
+
     // Check if this is the first message (only system message exists)
     const isFirstMessage = messages.length === 1 && messages[0].role === 'system';
     
