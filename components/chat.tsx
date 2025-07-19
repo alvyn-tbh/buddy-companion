@@ -9,7 +9,7 @@ import Header from "./sub-header";
 import { toast } from "sonner";
 import { SuggestedPrompts } from "./suggested-prompts";
 import type { Message as TMessage } from "ai";
-import { corporate } from "@/lib/system-prompt";
+import { corporate } from "@/lib/intro-prompt";
 
 // interface Message {
 //   id: string;

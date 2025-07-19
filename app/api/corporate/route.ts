@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { corporate } from '@/lib/system-prompt';
 import { usageTracker } from '@/lib/usage-tracker';
 import { createClient } from '@/lib/supabase/server';
-import { corporate as corporateIntro } from '@/lib/system-prompt';
+import { corporate as corporateIntro } from '@/lib/intro-prompt';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
