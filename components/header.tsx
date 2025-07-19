@@ -1,187 +1,98 @@
 'use client';
 
+import React, { memo, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
-import { UserProfile } from './user-profile';
+import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { Button } from './ui/button';
 
-export default function Header(props: { title: string }) {
-  const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+interface HeaderProps {
+  title?: string;
+}
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node) &&
-      buttonRef.current &&
-      !buttonRef.current.contains(event.target as Node)
-    ) {
-      setDropdownOpen(false);
-    }
-  };
+const MemoizedHeader = memo(function Header({ title = "Buddy AI" }: HeaderProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
   }, []);
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false);
+  }, []);
+
+  // Optimize navigation items with useMemo
+  const navigationItems = React.useMemo(() => [
+    { href: '/', label: 'Home', isActive: pathname === '/' },
+    { href: '/corporate', label: 'Corporate', isActive: pathname?.startsWith('/corporate') },
+    { href: '/travel', label: 'Travel', isActive: pathname?.startsWith('/travel') },
+    { href: '/emotional', label: 'Emotional', isActive: pathname?.startsWith('/emotional') },
+    { href: '/culture', label: 'Culture', isActive: pathname?.startsWith('/culture') },
+  ], [pathname]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+    <header className="relative z-50 w-full bg-white/90 backdrop-blur-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              {props.title}
-            </span>
+          <Link 
+            href="/" 
+            className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:scale-105 transition-transform duration-200"
+          >
+            {title}
           </Link>
-          
+
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            {/* Main Navigation Links */}
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/features" 
-                className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+          <nav className="hidden md:flex space-x-8">
+            {navigationItems.map(({ href, label, isActive }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`font-medium transition-colors duration-200 ${
+                  isActive
+                    ? 'text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-gray-700 hover:text-indigo-600'
+                }`}
               >
-                Features
+                {label}
               </Link>
-              <Link 
-                href="/how-it-works" 
-                className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                How It Works
-              </Link>
-              
-              {/* Services Dropdown */}
-              <div className="relative">
-                <button
-                  ref={buttonRef}
-                  onClick={() => setDropdownOpen(!isDropdownOpen)}
-                  className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1"
-                >
-                  Services
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isDropdownOpen && (
-                  <div ref={dropdownRef} className="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                    <div className="py-1">
-                      <Link href="/corporate" className="block px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                        Corporate Companion
-                      </Link>
-                      <Link href="/travel" className="block px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                        Travel Companion
-                      </Link>
-                      <Link href="/emotional" className="block px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                        Emotional Companion
-                      </Link>
-                      <Link href="/culture" className="block px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                        Culture & Communication
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            ))}
+          </nav>
 
-            {/* User Profile / Login Button */}
-            <div className="ml-4">
-              <UserProfile />
-            </div>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleMobileMenu}
-              className="h-8 w-8"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
+          {/* Mobile menu button */}
+          <button
+            onClick={toggleMenu}
+            className="md:hidden p-2 rounded-md text-gray-700 hover:text-indigo-600 hover:bg-gray-100 transition-colors duration-200"
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
 
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link 
-                href="/features" 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Features
-              </Link>
-              <Link 
-                href="/how-it-works" 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                How It Works
-              </Link>
-              
-              {/* Mobile Services Section */}
-              <div className="px-3 py-2">
-                <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
-                  Services
-                </div>
-                <div className="space-y-1">
-                  <Link 
-                    href="/corporate" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Corporate Companion
-                  </Link>
-                  <Link 
-                    href="/travel" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Travel Companion
-                  </Link>
-                  <Link 
-                    href="/emotional" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Emotional Companion
-                  </Link>
-                  <Link 
-                    href="/culture" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Culture & Communication
-                  </Link>
-                </div>
-              </div>
-
-              {/* Mobile User Profile */}
-              <div className="border-t border-gray-200 pt-4">
-                <UserProfile />
-              </div>
-            </div>
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 py-4">
+            <nav className="flex flex-col space-y-4">
+              {navigationItems.map(({ href, label, isActive }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={closeMenu}
+                  className={`font-medium transition-colors duration-200 ${
+                    isActive
+                      ? 'text-indigo-600 font-semibold'
+                      : 'text-gray-700 hover:text-indigo-600'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
-}
+});
+
+export default MemoizedHeader;

@@ -1,9 +1,11 @@
 import { Button } from "./ui/button";
 import { Textarea as TextareaComponent } from "./ui/textarea";
 import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, MessageCircle, MessageCircleOff } from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { toast } from "sonner";
-import { RealtimeWebRTC } from "../lib/realtime-webrtc";
+
+// Lazy load RealtimeWebRTC to reduce initial bundle size
+const RealtimeWebRTCModule = lazy(() => import('../lib/realtime-webrtc').then(mod => ({ default: mod.RealtimeWebRTC })));
 
 interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;
@@ -33,418 +35,372 @@ export function Textarea({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('');
   const [transcript, setTranscript] = useState("");
+  const [realtimeWebRTC, setRealtimeWebRTC] = useState<any>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const isProcessingRef = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const realtimeRef = useRef<RealtimeWebRTC | null>(null);
   const maxRecordingTime = 300000; // 5 minutes max recording time
   const silenceThreshold = 5000; // 5 seconds of silence
 
-  // Initialize RealtimeWebRTC
-  useEffect(() => {
-    realtimeRef.current = new RealtimeWebRTC();
-    
-    // Set up event handlers
-    realtimeRef.current.on('transcript', (text: string) => {
-      setTranscript(text);
-    });
-
-    realtimeRef.current.on('status', (status: string) => {
-      setConnectionStatus(status);
-      if (status === 'Connected') {
-        setIsConnecting(false);
+  // Lazy initialize RealtimeWebRTC only when needed
+  const initializeRealtimeWebRTC = useCallback(async () => {
+    if (!realtimeWebRTC) {
+      try {
+        const { RealtimeWebRTC } = await import('../lib/realtime-webrtc');
+        const instance = new RealtimeWebRTC();
+        setRealtimeWebRTC(instance);
+        return instance;
+      } catch (error) {
+        console.error('Failed to load RealtimeWebRTC:', error);
+        toast.error('Failed to initialize voice mode');
+        return null;
       }
-    });
+    }
+    return realtimeWebRTC;
+  }, [realtimeWebRTC]);
 
-    realtimeRef.current.on('error', (error: string) => {
-      console.error('Realtime error:', error);
-      toast.error(`Realtime error: ${error}`);
-      setIsVoiceModeActive(false);
-      setIsConnecting(false);
-    });
-
-    return () => {
-      if (realtimeRef.current) {
-        realtimeRef.current.disconnect();
-      }
-    };
-  }, []);
-
+  // Toggle Voice Mode
   const toggleVoiceMode = useCallback(async () => {
     if (isVoiceModeActive) {
-      // Stop voice mode
-      if (realtimeRef.current) {
-        realtimeRef.current.disconnect();
-      }
+      // Disconnect voice mode
       setIsVoiceModeActive(false);
-      setIsConnecting(false);
       setConnectionStatus('');
-      setTranscript("");
-      toast.info("Voice mode deactivated");
-    } else {
-      // Start voice mode
-      try {
-        setIsConnecting(true);
-        setConnectionStatus('Creating session...');
-        
-        if (!realtimeRef.current) {
-          realtimeRef.current = new RealtimeWebRTC();
+      if (realtimeWebRTC) {
+        try {
+          realtimeWebRTC.disconnect();
+        } catch (error) {
+          console.error('Error disconnecting voice mode:', error);
         }
-
-        // Create session
-        await realtimeRef.current.createSession({
-          model: 'gpt-4o-realtime-preview-2024-12-17',
-          voice: voice,
-          instructions: "You are a helpful AI assistant. Respond naturally and conversationally to user input."
-        });
-
-        // Connect to OpenAI Realtime
-        await realtimeRef.current.connect();
-        
-        setIsVoiceModeActive(true);
-        setTranscript("");
-        toast.success("Voice mode activated - Start speaking!");
-      } catch (error) {
-        console.error('Error starting voice mode:', error);
-        toast.error('Error starting voice mode');
-        setIsConnecting(false);
-        setConnectionStatus('');
       }
-    }
-  }, [isVoiceModeActive, voice]);
-
-  // Cleanup function to prevent memory leaks
-  const cleanupAudioResources = useCallback(() => {
-    try {
-      if (mediaRecorderRef.current) {
-        if (mediaRecorderRef.current.state !== 'inactive') {
-          mediaRecorderRef.current.stop();
-        }
-        mediaRecorderRef.current = null;
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track: MediaStreamTrack) => {
-          track.stop();
-        });
-        streamRef.current = null;
-      }
-      audioChunksRef.current = [];
-      isProcessingRef.current = false;
-    } catch (error) {
-      console.error('Error during cleanup:', error);
-    }
-  }, []);
-
-  // Function to transcribe audio using OpenAI API
-  const transcribeAudioWithOpenAI = useCallback(async (audioBlob: Blob): Promise<string> => {
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('language', 'en');
-      formData.append('responseFormat', 'verbose_json');
-
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Transcription failed');
-      }
-
-      const result = await response.json();
-      return result.transcription || '';
-    } catch (error) {
-      console.error('Transcription error:', error);
-      throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }, []);
-
-  const handleMicClick = useCallback(async () => {
-    if (isRecording) {
-      // Stop recording and transcribe
-      setIsRecording(false);
-      setIsTranscribing(true);
-      
-      // Clear silence timer
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      
-      // Stop media recorder
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
-      }
-      
-      // Stop stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-        streamRef.current = null;
-      }
-      
-      // Process the recorded audio for transcription
-      try {
-        // Combine all audio chunks into a single blob
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        
-        if (audioBlob.size > 0) {
-          // Transcribe using OpenAI API
-          const transcription = await transcribeAudioWithOpenAI(audioBlob);
-          
-          if (transcription.trim()) {
-            handleInputChange({ target: { value: transcription.trim() } });
-            toast.success("Transcription completed!");
-          } else {
-            toast.warning("No speech detected in the recording");
-          }
-        } else {
-          toast.error("No audio data recorded");
-        }
-      } catch (error) {
-        console.error('Error processing audio:', error);
-        toast.error("Error transcribing audio recording");
-      } finally {
-        setIsTranscribing(false);
-        isProcessingRef.current = false;
-        audioChunksRef.current = [];
-      }
-      
       return;
     }
 
-    // Start recording
+    // Initialize voice mode
+    setIsConnecting(true);
+    setConnectionStatus('Initializing...');
+    
+    try {
+      const rtc = await initializeRealtimeWebRTC();
+      if (!rtc) {
+        setIsConnecting(false);
+        return;
+      }
+
+      // Set up event handlers
+      rtc.onTranscript = (transcript: string) => {
+        setTranscript(transcript);
+        handleInputChange({ target: { value: transcript } });
+      };
+
+      rtc.onResponse = (response: string) => {
+        console.log('AI Response:', response);
+      };
+
+      rtc.onStatusChange = (status: string) => {
+        setConnectionStatus(status);
+        if (status === 'Connected') {
+          setIsVoiceModeActive(true);
+          setIsConnecting(false);
+        }
+      };
+
+      rtc.onError = (error: string) => {
+        console.error('Voice mode error:', error);
+        toast.error(`Voice mode error: ${error}`);
+        setIsConnecting(false);
+        setIsVoiceModeActive(false);
+      };
+
+      // Create session and connect
+      const session = await rtc.createSession({
+        model: 'gpt-4o-realtime-preview-2024-10-01',
+        voice: voice,
+        instructions: `You are a helpful AI assistant. Respond conversationally and naturally.`
+      });
+
+      await rtc.connect();
+      
+    } catch (error) {
+      console.error('Error starting voice mode:', error);
+      toast.error('Failed to start voice mode');
+      setIsConnecting(false);
+      setIsVoiceModeActive(false);
+    }
+  }, [isVoiceModeActive, realtimeWebRTC, voice, handleInputChange, initializeRealtimeWebRTC]);
+
+  // Audio recording functions (optimized)
+  const startRecording = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 16000
         } 
       });
       
       streamRef.current = stream;
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      setRecordingStartTime(Date.now());
-
-      // Start MediaRecorder
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : 'audio/webm';
-
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-
-      mediaRecorderRef.current.ondataavailable = (event: BlobEvent) => {
+      
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
-      mediaRecorderRef.current.onstop = () => {
-        // Audio recording stopped, will be processed in handleMicClick
-        isProcessingRef.current = false;
-      };
-
-      mediaRecorderRef.current.start(1000);
+      
+      mediaRecorder.onstop = handleRecordingStop;
+      
+      mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
+      setRecordingStartTime(Date.now());
       
-      // Start silence detection timer
-      silenceTimerRef.current = setTimeout(() => {
-        if (isRecording) {
-          toast.info("Stopping recording due to silence...");
-          handleMicClick(); // Stop recording
+      // Auto-stop recording after max time
+      setTimeout(() => {
+        if (isRecording && mediaRecorderRef.current?.state === 'recording') {
+          stopRecording();
         }
-      }, silenceThreshold);
+      }, maxRecordingTime);
       
-      toast.success("Recording started... Speak now!");
     } catch (error) {
-      console.error("Error starting recording:", error);
-      toast.error("Could not access microphone");
-      setIsRecording(false);
+      console.error('Error starting recording:', error);
+      toast.error('Failed to start recording. Please check microphone permissions.');
     }
-  }, [isRecording, handleInputChange, silenceThreshold, transcribeAudioWithOpenAI]);
+  }, [isRecording]);
 
-  const toggleAudio = useCallback(() => {
-    onAudioToggle(!isAudioEnabled);
-    toast.info(!isAudioEnabled ? "Audio enabled" : "Audio disabled");
-  }, [isAudioEnabled, onAudioToggle]);
-
-  // Check for maximum recording time
-  useEffect(() => {
-    if (recordingStartTime && isRecording) {
-      const timer = setInterval(() => {
-        const elapsed = Date.now() - recordingStartTime;
-        if (elapsed >= maxRecordingTime) {
-          toast.warning("Maximum recording time reached (5 minutes)");
-          handleMicClick(); // Stop recording
-        }
-      }, 1000);
-
-      return () => clearInterval(timer);
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
     }
-  }, [recordingStartTime, isRecording, maxRecordingTime, handleMicClick]);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setIsRecording(false);
+    setRecordingStartTime(null);
+    
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const handleRecordingStop = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    
+    isProcessingRef.current = true;
+    setIsTranscribing(true);
+    
+    try {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      
+      if (audioBlob.size === 0) {
+        toast.error('No audio recorded');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+      
+      const { transcription } = await response.json();
+      
+      if (transcription?.trim()) {
+        const newValue = input + (input ? ' ' : '') + transcription;
+        handleInputChange({ target: { value: newValue } });
+        toast.success('Audio transcribed successfully');
+      } else {
+        toast.error('No speech detected in recording');
+      }
+      
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      toast.error('Failed to transcribe audio');
+    } finally {
+      setIsTranscribing(false);
+      isProcessingRef.current = false;
+    }
+  }, [input, handleInputChange]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanupAudioResources();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (realtimeWebRTC) {
+        realtimeWebRTC.disconnect();
+      }
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
-      if (realtimeRef.current) {
-        realtimeRef.current.disconnect();
-      }
     };
-  }, [cleanupAudioResources]);
-
-  // Prevent recording when loading, but allow stopping when recording
-  const canRecord = !isLoading && !isTranscribing && (!isProcessingRef.current || isRecording);
+  }, [realtimeWebRTC]);
 
   return (
     <div className="relative">
-      <TextareaComponent
-        value={input}
-        onChange={handleInputChange}
-        placeholder="Type your message or click the microphone to speak..."
-        className="min-h-[60px] w-full resize-none bg-transparent px-4 py-[1.3rem] focus-within:outline-none sm:text-sm"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (input.trim()) {
-              const formEvent = {
-                preventDefault: () => { },
-              } as React.FormEvent<HTMLFormElement>;
-              handleSubmit(formEvent);
-            }
-          }
-        }}
-      />
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        {/* Voice Mode Button */}
-        <Button
-          variant={isVoiceModeActive ? "default" : "ghost"}
-          size="icon"
-          className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
-          onClick={toggleVoiceMode}
-          disabled={isLoading || isRecording || isTranscribing || isConnecting}
-          title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
-        >
-          {isVoiceModeActive ? (
-            <MessageCircleOff className="h-5 w-5 text-white" />
-          ) : isConnecting ? (
-            <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <MessageCircle className="h-5 w-5" />
-          )}
-        </Button>
-
-        {/* Audio Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={toggleAudio}
-          title={isAudioEnabled ? "Disable audio" : "Enable audio"}
-        >
-          {isAudioEnabled ? (
-            <Volume2 className="h-5 w-5" />
-          ) : (
-            <VolumeX className="h-5 w-5 text-gray-400" />
-          )}
-        </Button>
-
-        {/* Microphone Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-8 w-8 ${isRecording ? 'animate-pulse bg-red-100 dark:bg-red-900' : ''}`}
-          onClick={handleMicClick}
-          disabled={!canRecord || isVoiceModeActive}
-          title={isRecording ? "Stop recording" : "Start voice recording"}
-        >
-          {isRecording ? (
-            <MicOff className="h-5 w-5 text-red-500" />
-          ) : isTranscribing ? (
-            <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Mic className="h-5 w-5" />
-          )}
-        </Button>
-
-        {/* Send/Stop Button */}
-        {isLoading || isRecording ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={isRecording ? handleMicClick : stop}
-          >
-            <StopCircle className="h-5 w-5" />
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!input.trim() || isRecording || isTranscribing || isVoiceModeActive}
-            onClick={() => {
-              if (input.trim()) {
-                const formEvent = {
-                  preventDefault: () => { },
-                } as React.FormEvent<HTMLFormElement>;
-                handleSubmit(formEvent);
+      <form
+        onSubmit={handleSubmit}
+        className="bg-background border border-input rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 relative overflow-hidden"
+      >
+        <TextareaComponent
+          autoComplete="off"
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Say anything..."
+          className="min-h-[60px] w-full resize-none bg-transparent px-4 py-[1.3rem] focus-within:outline-none border-0 focus:ring-0 focus:ring-offset-0"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              if (input.trim() && !isLoading) {
+                handleSubmit(event as any);
               }
-            }}
-          >
-            <SendHorizontal className="h-5 w-5" />
-          </Button>
+            }
+          }}
+        />
+        
+        {/* Control buttons row */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+            {/* Voice Recording Button */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isTranscribing || isVoiceModeActive}
+              className={`${isRecording ? 'bg-red-100 border-red-300 text-red-700' : ''}`}
+            >
+              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+
+            {/* Voice Mode Toggle - Only load when needed */}
+            <Suspense fallback={
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            }>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={toggleVoiceMode}
+                disabled={isConnecting || isRecording || isTranscribing}
+                className={`${isVoiceModeActive ? 'bg-blue-100 border-blue-300 text-blue-700' : ''}`}
+              >
+                {isConnecting ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                ) : isVoiceModeActive ? (
+                  <MessageCircleOff className="h-4 w-4" />
+                ) : (
+                  <MessageCircle className="h-4 w-4" />
+                )}
+              </Button>
+            </Suspense>
+
+            {/* Audio Toggle */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onAudioToggle(!isAudioEnabled)}
+              className={`${isAudioEnabled ? 'bg-green-100 border-green-300 text-green-700' : ''}`}
+            >
+              {isAudioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Send/Stop Button */}
+          {isLoading ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={stop}
+            >
+              <StopCircle className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="sm"
+              variant="default"
+              disabled={!input.trim()}
+              onClick={(e) => {
+                e.preventDefault();
+                const formEvent = new Event('submit', { bubbles: true, cancelable: true }) as any;
+                formEvent.preventDefault = () => {};
+                handleSubmit(formEvent);
+              }}
+            >
+              <SendHorizontal className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+
+        {/* Voice Mode Status Indicators */}
+        {isVoiceModeActive && (
+          <div className="absolute -top-8 left-0 right-0 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+              <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+              Voice Mode {connectionStatus || 'Connecting...'}
+            </div>
+          </div>
         )}
-      </div>
 
-      {/* Voice Mode Status Indicators */}
-      {isVoiceModeActive && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-            Voice Mode {connectionStatus || 'Connecting...'}
+        {/* Recording Status Indicator */}
+        {isRecording && (
+          <div className="absolute -top-8 left-0 right-0 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-full text-sm">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              Recording... Click to stop
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Recording Status Indicator */}
-      {isRecording && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-full text-sm">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            Recording... Click to stop
+        {/* Transcribing Status Indicator */}
+        {isTranscribing && (
+          <div className="absolute -top-8 left-0 right-0 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
+              Transcribing with OpenAI...
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Transcribing Status Indicator */}
-      {isTranscribing && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
-            Transcribing with OpenAI...
+        {/* Voice Mode Transcript Display */}
+        {isVoiceModeActive && transcript && (
+          <div className="absolute -top-24 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
+            <div className="mb-2">
+              <span className="text-xs font-medium text-gray-500">You said:</span>
+              <p className="text-sm">{transcript}</p>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Voice Mode Transcript Display */}
-      {isVoiceModeActive && transcript && (
-        <div className="absolute -top-24 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-500">You said:</span>
-            <p className="text-sm">{transcript}</p>
-          </div>
-        </div>
-      )}
+        )}
+      </form>
     </div>
   );
 }
