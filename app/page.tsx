@@ -8,7 +8,7 @@ import Footer from '@/components/footer';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen w-full bg-white dark:bg-black px-2 sm:px-6 lg:px-8 py-6 space-y-8">
+    <main className="min-h-screen w-full bg-white dark:bg-black px-2 sm:px-6 lg:px-8 py-6 space-y-8 pt-24 sm:pt-28">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
