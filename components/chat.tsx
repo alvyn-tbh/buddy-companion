@@ -138,7 +138,7 @@ export default function Chat(props: {
   ];
 
   return (
-    <div className="h-dvh flex flex-col justify-center w-full stretch">
+    <div className="flex-1 flex flex-col w-full max-w-full min-h-0">
       <Header 
         title="Buddy AI | Corporate Wellness" 
         chat_url={props.chat_url} 
@@ -149,24 +149,25 @@ export default function Chat(props: {
         voice={voice}
         onVoiceChange={handleVoiceChange}
       />
-
-      {displayMessages.length === 0 ? (
-        <div className="max-w-xl mx-auto w-full">
-          <ProjectOverview />
-          <div className="mt-8 px-4">
-            <SuggestedPrompts sendMessage={handleSendMessage} />
+      <div className="flex-1 flex flex-col min-h-0">
+        {displayMessages.length === 0 ? (
+          <div className="max-w-xl mx-auto w-full">
+            <ProjectOverview />
+            <div className="mt-8 px-4">
+              <SuggestedPrompts sendMessage={handleSendMessage} />
+            </div>
           </div>
-        </div>
-      ) : (
-        <Messages 
-          messages={displayMessages} 
-          isLoading={isLoading} 
-          status={status} 
-        />
-      )}
+        ) : (
+          <Messages 
+            messages={displayMessages} 
+            isLoading={isLoading} 
+            status={status} 
+          />
+        )}
+      </div>
       <form
         onSubmit={handleSubmit}
-        className="pb-8 bg-white dark:bg-black w-full max-w-xl mx-auto px-4 sm:px-0"
+        className="pb-4 pt-2 bg-white dark:bg-black w-full max-w-xl mx-auto px-2 sm:px-0 flex-shrink-0"
       >
         <Textarea
           handleInputChange={handleInputChange}

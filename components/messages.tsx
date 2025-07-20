@@ -15,7 +15,7 @@ export const Messages = ({
   
   return (
     <div
-      className="flex-1 h-full space-y-4 overflow-y-auto py-8"
+      className="flex-1 h-full space-y-4 overflow-y-auto py-4 px-2 sm:px-0 w-full"
       ref={containerRef}
     >
       <div className="max-w-xl mx-auto pt-8">
