@@ -22,7 +22,7 @@ export default function LandingPage() {
       <Header title="Buddy AI | Corporate Wellness" chat_url="/corporate/chat" features_url="/corporate/features" how_it_works_url="/corporate/how-it-works" />
 
       {/* Main Section */}
-      <main className="flex-1 pt-8 pb-0 px-2 sm:px-6 lg:px-8 w-full">
+      <main className="flex-1 pt-24 sm:pt-28 pb-0 px-2 sm:px-6 lg:px-8 w-full">
         <div className="max-w-7xl mx-auto h-full flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
