@@ -27,10 +27,10 @@ export default function HomePage() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-8">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-8">
             One Voice. Many Sides. Always There.
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8">
+          <p className="text-base sm:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8">
             Your personal AI companion for every side of life - whether you&apos;re stressed at work, learning a new culture, lost on the road or just need to talk things through.
           </p>
           {/* <Link
@@ -48,14 +48,14 @@ export default function HomePage() {
           transition={{ delay: 0.2, duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             More Than a Chat. It&apos;s Presence.
           </h2>
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-4xl mx-auto">
-            <p className="text-lg text-gray-600 leading-relaxed mb-4">
+          <div className="bg-white/80 backdrop-blur-sm p-4 sm:p-8 rounded-2xl shadow-xl max-w-4xl mx-auto">
+            <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4">
               Buddy AI isn&apos;t a chatbot - it&apos;s a grounded, emotionally intelligent companion built to adapt to your world. It listens when you need silence, helps when you feel stuck and speaks like someone who understands.
             </p>
-            <p className="text-lg font-semibold text-gray-800">
+            <p className="text-base sm:text-lg font-semibold text-gray-800">
               No tasks. No distractions. Just real-time support across life&apos;s messy moments.
             </p>
           </div>
@@ -63,10 +63,10 @@ export default function HomePage() {
 
         {/* Four Signature Modes */}
         <section className="mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Advanced Interaction Models
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {[
               {
                 icon: "🧘",
@@ -126,11 +126,11 @@ export default function HomePage() {
           transition={{ delay: 0.8, duration: 0.8 }}
           className="mb-16"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Why Buddy Works
           </h2>
-          <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-4xl mx-auto">
-            <ul className="space-y-4 text-lg text-gray-700">
+          <div className="bg-white/80 backdrop-blur-sm p-4 sm:p-8 rounded-2xl shadow-xl max-w-4xl mx-auto">
+            <ul className="space-y-4 text-base sm:text-lg text-gray-700">
               <li className="flex items-center">
                 <span className="w-2 h-2 bg-indigo-600 rounded-full mr-4"></span>
                 Emotionally aware, not emotionally fake
@@ -148,7 +148,7 @@ export default function HomePage() {
                 Doesn&apos;t pretend to be human. Just helpful.
               </li>
             </ul>
-            <p className="text-gray-600 mt-6 text-center italic">
+            <p className="text-gray-600 mt-6 text-center italic text-xs sm:text-base">
               Built with ❤️ by experts in emotional design, voice interaction and everyday context.
             </p>
           </div>
@@ -156,10 +156,10 @@ export default function HomePage() {
 
         {/* How It Works */}
         <section className="mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             How It Works
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto">
             {[
               {
                 step: "1",
@@ -201,13 +201,13 @@ export default function HomePage() {
           transition={{ delay: 1.6, duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Choose your Buddy. Start the conversation.
           </h2>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-base sm:text-lg text-gray-600 mb-8">
             No app install. No sign-up. Just pick a mode and start.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
             {[['Emotional', "emotional"], ['Travel', "travel"], ['Corporate', "corporate"], ['Culture', "culture"]].map(([mode, href], index) => (
               <Link
                 key={index}

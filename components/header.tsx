@@ -35,7 +35,7 @@ export default function Header(props: { title: string }) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -44,7 +44,6 @@ export default function Header(props: { title: string }) {
               {props.title}
             </span>
           </Link>
-          
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
             {/* Main Navigation Links */}
@@ -61,13 +60,13 @@ export default function Header(props: { title: string }) {
               >
                 How It Works
               </Link>
-              
               {/* Services Dropdown */}
               <div className="relative">
                 <button
                   ref={buttonRef}
                   onClick={() => setDropdownOpen(!isDropdownOpen)}
                   className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1"
+                  style={{ minHeight: 44 }}
                 >
                   Services
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,49 +93,48 @@ export default function Header(props: { title: string }) {
                 )}
               </div>
             </div>
-
             {/* User Profile / Login Button */}
             <div className="ml-4">
               <UserProfile />
             </div>
           </div>
-
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMobileMenu}
-              className="h-8 w-8"
+              className="h-10 w-10"
+              style={{ minWidth: 44, minHeight: 44 }}
             >
               {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
               )}
             </Button>
           </div>
         </div>
-
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white">
             <div className="px-2 pt-2 pb-3 space-y-1">
               <Link 
                 href="/features" 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
+                className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
+                style={{ minHeight: 44 }}
               >
                 Features
               </Link>
               <Link 
                 href="/how-it-works" 
-                className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
+                className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
+                style={{ minHeight: 44 }}
               >
                 How It Works
               </Link>
-              
               {/* Mobile Services Section */}
               <div className="px-3 py-2">
                 <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
@@ -145,35 +143,38 @@ export default function Header(props: { title: string }) {
                 <div className="space-y-1">
                   <Link 
                     href="/corporate" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
+                    className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ minHeight: 44 }}
                   >
                     Corporate Companion
                   </Link>
                   <Link 
                     href="/travel" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
+                    className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ minHeight: 44 }}
                   >
                     Travel Companion
                   </Link>
                   <Link 
                     href="/emotional" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
+                    className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ minHeight: 44 }}
                   >
                     Emotional Companion
                   </Link>
                   <Link 
                     href="/culture" 
-                    className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
+                    className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ minHeight: 44 }}
                   >
                     Culture & Communication
                   </Link>
                 </div>
               </div>
-
               {/* Mobile User Profile */}
               <div className="border-t border-gray-200 pt-4">
                 <UserProfile />
