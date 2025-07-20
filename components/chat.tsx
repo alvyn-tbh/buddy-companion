@@ -138,7 +138,7 @@ export default function Chat(props: {
   ];
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-full min-h-0">
+    <div className="flex-1 flex flex-col w-full max-w-full min-h-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <Header 
         title="Buddy AI | Corporate Wellness" 
         chat_url={props.chat_url} 
@@ -149,7 +149,7 @@ export default function Chat(props: {
         voice={voice}
         onVoiceChange={handleVoiceChange}
       />
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 w-full max-w-full">
         {displayMessages.length === 0 ? (
           <div className="max-w-xl mx-auto w-full">
             <ProjectOverview />
@@ -168,6 +168,7 @@ export default function Chat(props: {
       <form
         onSubmit={handleSubmit}
         className="pb-4 pt-2 bg-white dark:bg-black w-full max-w-xl mx-auto px-2 sm:px-0 flex-shrink-0"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <Textarea
           handleInputChange={handleInputChange}
