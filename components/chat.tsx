@@ -9,6 +9,7 @@ import Header from "./sub-header";
 import { toast } from "sonner";
 import { SuggestedPrompts } from "./suggested-prompts";
 import type { Message as TMessage } from "ai";
+import { corporate } from "@/lib/intro-prompt";
 
 // interface Message {
 //   id: string;
@@ -98,7 +99,7 @@ export default function Chat(props: {
     if (!hasStartedConversation && messages.length === 0 && props.api === '/api/corporate') {
       // Add a small delay to ensure the chat is ready
       setTimeout(() => {
-        const introContent = "I am your corporate wellness companion, designed to support you during emotionally demanding moments at work. I can help you with burnout, decision fatigue, rumination, or personal doubt by offering a calm, thoughtful space for reflection. What is your name, company you are working, and your role?";
+        const introContent = corporate;
         
         setIntroMessage({
           id: 'intro-message',
