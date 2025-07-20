@@ -10,7 +10,7 @@ export default function LandingPage() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-800 relative overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-800 relative flex flex-col">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
@@ -22,7 +22,7 @@ export default function LandingPage() {
       <Header title="Buddy AI | Corporate Wellness" chat_url="/corporate/chat" features_url="/corporate/features" how_it_works_url="/corporate/how-it-works" />
 
       {/* Main Section */}
-      <main className="flex-1 pt-8 pb-0 px-2 sm:px-6 lg:px-8 w-full">
+      <main className="flex-1 pt-24 sm:pt-28 pb-0 px-2 sm:px-6 lg:px-8 w-full">
         <div className="max-w-7xl mx-auto h-full flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

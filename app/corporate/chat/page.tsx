@@ -26,7 +26,7 @@ export default function Page() {
 
   return (
     <AuthGuard redirectTo="/corporate">
-      <div className="corporate-chat-container w-full min-h-screen px-2 sm:px-6 lg:px-8">
+      <div className="corporate-chat-container w-full min-h-screen flex flex-col py-2 sm:py-4 lg:py-8 px-2 sm:px-6 lg:px-8">
         <Chat 
           api="/api/corporate" 
           chat_url="/corporate/chat" 

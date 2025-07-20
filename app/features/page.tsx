@@ -11,7 +11,7 @@ export default function FeaturesPage() {
 
       <div className="flex-1">
         {/* What It Is Section */}
-        <section className="pt-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <section className="pt-24 px-4 sm:px-6 lg:px-8 relative">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-20 left-40 w-48 h-48 bg-purple-300/20 rounded-full blur-3xl animate-float" />
             <div className="absolute bottom-40 right-40 w-48 h-48 bg-indigo-300/20 rounded-full blur-3xl animate-float-delayed" />
@@ -33,7 +33,7 @@ export default function FeaturesPage() {
         </section>
 
         {/* Features Section */}
-        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 relative overflow-hidden">
+        <section className="py-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 relative">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-pink-300/20 rounded-full blur-3xl animate-float" />
             <div className="absolute bottom-1/4 right-1/3 w-48 h-48 bg-blue-300/20 rounded-full blur-3xl animate-float-delayed" />
