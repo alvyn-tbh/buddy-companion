@@ -99,7 +99,8 @@ async function performInit() {
     }
     
     if (!redisClient.isReady || !cacheClient.isReady) {
-      throw new Error('Redis clients failed to become ready');
+      console.error('Redis clients failed to become ready');
+      return;
     }
     
     console.log('✅ Redis connections established successfully');
