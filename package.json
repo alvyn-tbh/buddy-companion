@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "analyze": "ANALYZE=true next build",
     "queue:worker": "tsx lib/queue/worker.ts",
     "queue:monitor": "tsx lib/queue/monitor.ts"
   },
@@ -32,6 +33,7 @@
     "bull": "^4.16.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "critters": "^0.0.25",
     "fast-deep-equal": "^3.1.3",
     "framer-motion": "^12.15.0",
     "lucide-react": "^0.487.0",
@@ -52,11 +54,11 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@stagewise-plugins/react": "^0.6.1",
-    "@stagewise/toolbar": "^0.6.1",
-    "@stagewise/toolbar-next": "^0.6.1",
+    "@next/bundle-analyzer": "^15.4.2",
+    "@stagewise-plugins/react": "^0.6.2",
+    "@stagewise/toolbar": "^0.6.2",
+    "@stagewise/toolbar-next": "^0.6.2",
     "@tailwindcss/postcss": "^4.1.3",
-    "@types/bull": "^4.10.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.1",
@@ -66,5 +68,5 @@
     "tsx": "^4.19.2",
     "typescript": "^5.8.3"
   },
-  "packageManager": "pnpm@10.12.2+sha512.a32540185b964ee30bb4e979e405adc6af59226b438ee4cc19f9e8773667a66d302f5bfee60a39d3cac69e35e4b96e708a71dd002b7e9359c4112a1722ac323f"
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }
