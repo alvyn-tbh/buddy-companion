@@ -16,14 +16,11 @@ const nextConfig: NextConfig = {
   },
   
   // Enable modularizeImports for common libraries
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{member}}',
-    },
-    '@radix-ui/react-icons': {
-      transform: '@radix-ui/react-icons/dist/{{member}}',
-    },
-  },
+  // modularizeImports: {
+  //   '@radix-ui/react-icons': {
+  //     transform: '@radix-ui/react-icons/dist/{{member}}',
+  //   },
+  // },
   
   // Compress static files
   compress: true,
@@ -39,7 +36,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: [
-      'lucide-react',
       '@radix-ui/react-select',
       '@radix-ui/react-tabs',
       '@radix-ui/react-avatar',
