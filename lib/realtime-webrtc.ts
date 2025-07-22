@@ -191,6 +191,8 @@ export class RealtimeWebRTC {
         this.handleRealtimeEvent(data);
       } catch (error) {
         console.error('Error parsing realtime event:', error);
+        // Notify error handler about malformed data
+        this.onError?.(`Failed to parse realtime event: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     });
 

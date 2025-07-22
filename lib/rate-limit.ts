@@ -7,6 +7,30 @@ interface RateLimitStore {
 
 const store: RateLimitStore = {};
 
+// Cleanup expired entries periodically
+const CLEANUP_INTERVAL = 60000; // 1 minute
+const cleanupTimer = setInterval(() => {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  
+  for (const key in store) {
+    if (store[key].resetTime < now) {
+      keysToDelete.push(key);
+    }
+  }
+  
+  keysToDelete.forEach(key => delete store[key]);
+  
+  if (keysToDelete.length > 0) {
+    console.log(`Rate limiter cleanup: removed ${keysToDelete.length} expired entries`);
+  }
+}, CLEANUP_INTERVAL);
+
+// Ensure cleanup on process exit
+if (typeof process !== 'undefined') {
+  process.on('exit', () => clearInterval(cleanupTimer));
+}
+
 export function rateLimit(identifier: string, limit: number = 10, windowMs: number = 60000): boolean {
   const now = Date.now();
   const key = identifier;
