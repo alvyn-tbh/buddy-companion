@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Textarea as TextareaComponent } from "./ui/textarea";
-import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, MessageCircle, MessageCircleOff } from "lucide-react";
+import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, Radio, Square } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { RealtimeWebRTC } from "../lib/realtime-webrtc";
@@ -362,11 +362,11 @@ export function Textarea({
             title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
           >
             {isVoiceModeActive ? (
-              <MessageCircleOff className="h-5 w-5 text-white" />
+              <Square className="h-5 w-5 text-white" />
             ) : isConnecting ? (
               <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <MessageCircle className="h-5 w-5" />
+              <Radio className="h-5 w-5" />
             )}
           </Button>
           {isVoiceModeActive && connectionStatus === 'Connected' && (
