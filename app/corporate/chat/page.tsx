@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect } from 'react';
-import Chat from "@/components/chat";
+import { useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { trackPageView } from "@/lib/analytics";
 import { AuthGuard } from '@/components/auth-guard';
+
+// Dynamic import of Chat component to reduce initial bundle size
+const Chat = dynamic(() => import('@/components/chat'), {
+  loading: () => (
+    <div className="w-full min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground">Loading chat interface...</p>
+      </div>
+    </div>
+  ),
+  ssr: false // Disable SSR for chat component to prevent hydration issues
+});
 
 // Corporate-specific voice configuration
 const CORPORATE_VOICE_CONFIG = {

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "analyze": "ANALYZE=true next build",
     "queue:worker": "tsx lib/queue/worker.ts",
     "queue:monitor": "tsx lib/queue/monitor.ts"
   },
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@next/bundle-analyzer": "^15.4.2",
     "@stagewise-plugins/react": "^0.6.1",
     "@stagewise/toolbar": "^0.6.1",
     "@stagewise/toolbar-next": "^0.6.1",
