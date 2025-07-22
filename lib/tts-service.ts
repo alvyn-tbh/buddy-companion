@@ -1,5 +1,10 @@
 import { OpenAI } from 'openai';
 
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error('CRITICAL: OPENAI_API_KEY is not configured');
+}
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

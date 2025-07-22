@@ -1,6 +1,11 @@
 import { OpenAI } from 'openai';
 import { getAudioProcessingQueue, JOB_TYPES } from './queue/bull-queue';
 
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error('CRITICAL: OPENAI_API_KEY is not configured');
+}
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

@@ -17,7 +17,12 @@ interface QueueStats {
 // JWT verification function (same as in auth route)
 function verifyToken(token: string): boolean {
   try {
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET is not configured');
+      return false;
+    }
+    
     const parts = token.split('.');
     if (parts.length !== 3) return false;
     

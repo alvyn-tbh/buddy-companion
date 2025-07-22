@@ -31,11 +31,25 @@ function parseRedisUrl() {
   const url = process.env.REDIS_URL || 'redis://localhost:6379';
   const urlObj = new URL(url);
   
+  const port = urlObj.port ? parseInt(urlObj.port) : 6379;
+  const db = urlObj.pathname && urlObj.pathname.length > 1 
+    ? parseInt(urlObj.pathname.slice(1)) 
+    : 0;
+
+  // Validate parsed numbers
+  if (isNaN(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid Redis port: ${urlObj.port}`);
+  }
+  
+  if (isNaN(db) || db < 0) {
+    throw new Error(`Invalid Redis database number: ${urlObj.pathname?.slice(1)}`);
+  }
+
   return {
     host: urlObj.hostname,
-    port: parseInt(urlObj.port) || 6379,
+    port,
     password: urlObj.password || undefined,
-    db: urlObj.pathname ? parseInt(urlObj.pathname.slice(1)) : 0,
+    db,
   };
 }
 

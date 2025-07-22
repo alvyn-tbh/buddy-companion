@@ -3,10 +3,21 @@ import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 
-// In production, these should be environment variables
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Validate environment variables
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Check if required environment variables are set
+if (!ADMIN_USERNAME || !ADMIN_PASSWORD || !JWT_SECRET) {
+  console.error('CRITICAL: Admin authentication credentials are not properly configured');
+  console.error('Please set ADMIN_USERNAME, ADMIN_PASSWORD, and JWT_SECRET environment variables');
+}
+
+// Validate JWT secret strength
+if (JWT_SECRET && JWT_SECRET.length < 32) {
+  console.warn('WARNING: JWT_SECRET should be at least 32 characters long for security');
+}
 
 // Simple JWT-like token generation (in production, use a proper JWT library)
 interface JWTPayload {
@@ -16,6 +27,10 @@ interface JWTPayload {
 }
 
 function generateToken(payload: JWTPayload): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -30,6 +45,10 @@ function generateToken(payload: JWTPayload): string {
 
 function verifyToken(token: string): boolean {
   try {
+    if (!JWT_SECRET) {
+      return false;
+    }
+    
     const parts = token.split('.');
     if (parts.length !== 3) return false;
     
@@ -48,6 +67,14 @@ function verifyToken(token: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
+
+    // Check if credentials are configured
+    if (!ADMIN_USERNAME || !ADMIN_PASSWORD || !JWT_SECRET) {
+      return NextResponse.json(
+        { error: 'Admin authentication is not properly configured' },
+        { status: 503 }
+      );
+    }
 
     // Validate credentials
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {

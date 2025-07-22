@@ -11,6 +11,12 @@ import { responseCache, generateCacheKey } from '../cache';
 import { transcribeAudio, base64ToBuffer, validateAudioInput } from '../audio-transcription';
 import { corporate } from '../system-prompt';
 
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error('CRITICAL: OPENAI_API_KEY is not configured');
+  console.error('Worker will fail to process OpenAI requests');
+}
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
