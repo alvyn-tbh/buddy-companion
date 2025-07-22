@@ -57,7 +57,7 @@ export class VoiceActivityDetector {
   async start(stream: MediaStream): Promise<void> {
     try {
       // Create audio context
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       
       // Create analyser node
       this.analyser = this.audioContext.createAnalyser();

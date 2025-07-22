@@ -36,6 +36,7 @@ export function Textarea({
   const [transcript, setTranscript] = useState("");
   const [volume, setVolume] = useState<number>(-50);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [noiseFloor, setNoiseFloor] = useState<number>(-50);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);

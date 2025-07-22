@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdvancedVoiceActivityDetector, VADConfig } from '@/lib/voice-activity-detector';
 import { VoiceActivityIndicator } from '@/components/voice-activity-indicator';
 import { Mic, MicOff, Settings } from 'lucide-react';
@@ -81,7 +80,7 @@ export default function VADTestPage() {
     setIsSpeaking(false);
   };
 
-  const updateConfig = (key: keyof VADConfig, value: any) => {
+  const updateConfig = (key: keyof VADConfig, value: string | number | boolean) => {
     const newConfig = { ...vadConfig, [key]: value };
     setVadConfig(newConfig);
     
@@ -268,7 +267,7 @@ export default function VADTestPage() {
               <CardTitle className="text-sm">Testing Instructions</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <p>1. Click "Start Listening" to begin voice activity detection</p>
+              <p>1. Click &quot;Start Listening&quot; to begin voice activity detection</p>
               <p>2. Try speaking in different environments (quiet, noisy, background music)</p>
               <p>3. Adjust the thresholds to find optimal settings for your environment</p>
               <p>4. The noise floor will automatically adapt to background noise levels</p>

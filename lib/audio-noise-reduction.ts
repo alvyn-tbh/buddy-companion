@@ -7,7 +7,7 @@ export class AudioNoiseReduction {
   private gain: GainNode;
   
   constructor() {
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     this.destination = this.audioContext.createMediaStreamDestination();
     
     // Create dynamics compressor for consistent levels
@@ -92,7 +92,7 @@ export class AudioNoiseReduction {
       if (frequency !== undefined) filter.frequency.value = frequency;
       if (q !== undefined) filter.Q.value = q;
       if (gain !== undefined && 'gain' in filter) {
-        (filter as any).gain.value = gain;
+        (filter as unknown as { gain: { value: number } }).gain.value = gain;
       }
     }
   }
