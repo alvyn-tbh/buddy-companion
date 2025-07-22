@@ -1,3 +1,6 @@
+import { AdvancedVoiceActivityDetector, VADConfig } from './voice-activity-detector';
+import { AudioNoiseReduction } from './audio-noise-reduction';
+
 export interface RealtimeSession {
   id: string;
   client_secret: {
@@ -11,6 +14,8 @@ export interface RealtimeConfig {
   model: string;
   voice: string;
   instructions?: string;
+  vadConfig?: VADConfig;
+  noiseReduction?: boolean;
 }
 
 export class RealtimeWebRTC {
@@ -21,12 +26,18 @@ export class RealtimeWebRTC {
   private session: RealtimeSession | null = null;
   private isConnected = false;
   private config: RealtimeConfig | null = null;
+  private vad: AdvancedVoiceActivityDetector | null = null;
+  private vadEnabled = true;
+  private noiseReduction: AudioNoiseReduction | null = null;
 
   // Event handlers
   private onTranscript?: (transcript: string) => void;
   private onResponse?: (response: string) => void;
   private onStatusChange?: (status: string) => void;
   private onError?: (error: string) => void;
+  private onVolumeChange?: (volume: number) => void;
+  private onSpeechStart?: () => void;
+  private onSpeechEnd?: () => void;
 
   constructor() {
     // Initialize RTCPeerConnection with STUN servers
@@ -109,15 +120,58 @@ export class RealtimeWebRTC {
     try {
       this.onStatusChange?.('Initializing connection...');
 
-      // Get user media for microphone
-      this.localStream = await navigator.mediaDevices.getUserMedia({
+      // Get user media for microphone with enhanced audio processing
+      const rawStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 16000
+          sampleRate: 16000,
+          // Additional constraints for better audio quality
+          channelCount: 1,
+          sampleSize: 16
         }
       });
+
+      // Apply additional noise reduction if enabled
+      if (this.config?.noiseReduction) {
+        this.noiseReduction = new AudioNoiseReduction();
+        this.localStream = await this.noiseReduction.processStream(rawStream);
+      } else {
+        this.localStream = rawStream;
+      }
+
+      // Initialize Voice Activity Detection
+      if (this.vadEnabled) {
+        this.vad = new AdvancedVoiceActivityDetector(
+          this.config?.vadConfig || {
+            voiceThreshold: 8,
+            silenceThreshold: 3,
+            preSpeechPadding: 200,
+            postSpeechPadding: 300,
+            noiseFloorAdaptation: true,
+            adaptationSpeed: 0.03
+          },
+          {
+            onSpeechStart: () => {
+              this.onSpeechStart?.();
+              this.onStatusChange?.('User speaking...');
+            },
+            onSpeechEnd: () => {
+              this.onSpeechEnd?.();
+              this.onStatusChange?.('Listening...');
+            },
+            onVolumeChange: (volume) => {
+              this.onVolumeChange?.(volume);
+            },
+            onNoiseFloorUpdate: (noiseFloor) => {
+              console.log('Noise floor updated:', noiseFloor);
+            }
+          }
+        );
+
+        await this.vad.start(this.localStream);
+      }
 
       // Add local audio track to peer connection
       this.localStream.getTracks().forEach(track => {
@@ -273,6 +327,18 @@ export class RealtimeWebRTC {
    */
   disconnect(): void {
     try {
+      // Stop VAD if running
+      if (this.vad) {
+        this.vad.stop();
+        this.vad = null;
+      }
+
+      // Stop noise reduction if running
+      if (this.noiseReduction) {
+        this.noiseReduction.disconnect();
+        this.noiseReduction = null;
+      }
+
       // Stop local stream
       if (this.localStream) {
         this.localStream.getTracks().forEach(track => track.stop());
@@ -316,20 +382,63 @@ export class RealtimeWebRTC {
   /**
    * Set event handlers
    */
-  on(event: 'transcript' | 'response' | 'status' | 'error', handler: (data: string) => void): void {
+  on(event: 'transcript' | 'response' | 'status' | 'error' | 'volume' | 'speechStart' | 'speechEnd', handler: ((data: string) => void) | ((volume: number) => void) | (() => void)): void {
     switch (event) {
       case 'transcript':
-        this.onTranscript = handler;
+        this.onTranscript = handler as (data: string) => void;
         break;
       case 'response':
-        this.onResponse = handler;
+        this.onResponse = handler as (data: string) => void;
         break;
       case 'status':
-        this.onStatusChange = handler;
+        this.onStatusChange = handler as (data: string) => void;
         break;
       case 'error':
-        this.onError = handler;
+        this.onError = handler as (data: string) => void;
+        break;
+      case 'volume':
+        this.onVolumeChange = handler as (volume: number) => void;
+        break;
+      case 'speechStart':
+        this.onSpeechStart = handler as () => void;
+        break;
+      case 'speechEnd':
+        this.onSpeechEnd = handler as () => void;
         break;
     }
+  }
+
+  /**
+   * Enable or disable VAD
+   */
+  setVADEnabled(enabled: boolean): void {
+    this.vadEnabled = enabled;
+    if (!enabled && this.vad) {
+      this.vad.stop();
+      this.vad = null;
+    }
+  }
+
+  /**
+   * Update VAD configuration
+   */
+  updateVADConfig(config: Partial<VADConfig>): void {
+    if (this.vad) {
+      this.vad.setConfig(config);
+    }
+  }
+
+  /**
+   * Get current speech state
+   */
+  getIsSpeaking(): boolean {
+    return this.vad?.getIsSpeaking() || false;
+  }
+
+  /**
+   * Get current noise floor
+   */
+  getNoiseFloor(): number {
+    return this.vad?.getNoiseFloor() || -50;
   }
 } 
