@@ -4,6 +4,7 @@ import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, MessageCircl
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { RealtimeWebRTC } from "../lib/realtime-webrtc";
+import { VoiceActivityIndicator, MiniVoiceIndicator } from "./voice-activity-indicator";
 
 interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;
@@ -33,6 +34,9 @@ export function Textarea({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('');
   const [transcript, setTranscript] = useState("");
+  const [volume, setVolume] = useState<number>(-50);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [noiseFloor, setNoiseFloor] = useState<number>(-50);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -64,6 +68,18 @@ export function Textarea({
       toast.error(`Realtime error: ${error}`);
       setIsVoiceModeActive(false);
       setIsConnecting(false);
+    });
+
+    realtimeRef.current.on('volume', (vol: number) => {
+      setVolume(vol);
+    });
+
+    realtimeRef.current.on('speechStart', () => {
+      setIsSpeaking(true);
+    });
+
+    realtimeRef.current.on('speechEnd', () => {
+      setIsSpeaking(false);
     });
 
     return () => {
@@ -98,7 +114,16 @@ export function Textarea({
         await realtimeRef.current.createSession({
           model: 'gpt-4o-realtime-preview-2024-12-17',
           voice: voice,
-          instructions: "You are a helpful AI assistant. Respond naturally and conversationally to user input."
+          instructions: "You are a helpful AI assistant. Respond naturally and conversationally to user input.",
+          noiseReduction: true,
+          vadConfig: {
+            voiceThreshold: 8,
+            silenceThreshold: 3,
+            preSpeechPadding: 200,
+            postSpeechPadding: 300,
+            noiseFloorAdaptation: true,
+            adaptationSpeed: 0.03
+          }
         });
 
         // Connect to OpenAI Realtime
@@ -326,22 +351,31 @@ export function Textarea({
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
         {/* Voice Mode Button */}
-        <Button
-          variant={isVoiceModeActive ? "default" : "ghost"}
-          size="icon"
-          className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
-          onClick={toggleVoiceMode}
-          disabled={isLoading || isRecording || isTranscribing || isConnecting}
-          title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
-        >
-          {isVoiceModeActive ? (
-            <MessageCircleOff className="h-5 w-5 text-white" />
-          ) : isConnecting ? (
-            <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <MessageCircle className="h-5 w-5" />
+        <div className="relative">
+          <Button
+            variant={isVoiceModeActive ? "default" : "ghost"}
+            size="icon"
+            className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+            onClick={toggleVoiceMode}
+            disabled={isLoading || isRecording || isTranscribing || isConnecting}
+            title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
+          >
+            {isVoiceModeActive ? (
+              <MessageCircleOff className="h-5 w-5 text-white" />
+            ) : isConnecting ? (
+              <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <MessageCircle className="h-5 w-5" />
+            )}
+          </Button>
+          {isVoiceModeActive && connectionStatus === 'Connected' && (
+            <MiniVoiceIndicator
+              isSpeaking={isSpeaking}
+              volume={volume}
+              className="absolute -top-1 -right-1"
+            />
           )}
-        </Button>
+        </div>
 
         {/* Audio Toggle Button */}
         <Button
@@ -408,10 +442,21 @@ export function Textarea({
 
       {/* Voice Mode Status Indicators */}
       {isVoiceModeActive && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-            Voice Mode {connectionStatus || 'Connecting...'}
+        <div className="absolute -top-12 left-0 right-0 text-center">
+          <div className="inline-flex flex-col items-center gap-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+              <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+              Voice Mode {connectionStatus || 'Connecting...'}
+            </div>
+            {connectionStatus === 'Connected' && (
+              <VoiceActivityIndicator
+                isActive={true}
+                isSpeaking={isSpeaking}
+                volume={volume}
+                noiseFloor={noiseFloor}
+                className="bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm"
+              />
+            )}
           </div>
         </div>
       )}
