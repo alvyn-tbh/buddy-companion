@@ -1,32 +1,33 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
-// Types for motion components
+// Types for motion components - used for documentation and potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface MotionProps {
   children: ReactNode;
-  initial?: any;
-  animate?: any;
-  exit?: any;
-  transition?: any;
-  whileHover?: any;
-  whileTap?: any;
-  variants?: any;
+  initial?: Record<string, unknown>;
+  animate?: Record<string, unknown>;
+  exit?: Record<string, unknown>;
+  transition?: Record<string, unknown>;
+  whileHover?: Record<string, unknown>;
+  whileTap?: Record<string, unknown>;
+  variants?: Record<string, unknown>;
   className?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Dynamically import motion components
 const MotionDiv = dynamic(
   () => import('framer-motion').then((mod) => mod.motion.div),
   { ssr: false }
-) as React.FC<MotionProps>;
+);
 
 const MotionSection = dynamic(
   () => import('framer-motion').then((mod) => mod.motion.section),
   { ssr: false }
-) as React.FC<MotionProps>;
+);
 
 const AnimatePresence = dynamic(
   () => import('framer-motion').then((mod) => mod.AnimatePresence),
@@ -37,9 +38,13 @@ const AnimatePresence = dynamic(
 export { MotionDiv, MotionSection, AnimatePresence };
 
 // Helper function for creating motion components on demand
-export function createMotionComponent<T extends keyof JSX.IntrinsicElements>(element: T) {
+export function createMotionComponent(element: string) {
   return dynamic(
-    () => import('framer-motion').then((mod) => (mod.motion as any)[element]),
+    () => import('framer-motion').then((mod) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const MotionComponent = (mod.motion as any)[element];
+      return MotionComponent;
+    }),
     { ssr: false }
-  ) as React.FC<MotionProps>;
+  );
 }

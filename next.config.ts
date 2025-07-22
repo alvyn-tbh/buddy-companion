@@ -8,9 +8,6 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig: NextConfig = {
   serverExternalPackages: ['openai', 'bull', 'redis'],
   
-  // Enable SWC minification (faster than Terser)
-  swcMinify: true,
-  
   // Optimize images
   images: {
     formats: ['image/avif', 'image/webp'],

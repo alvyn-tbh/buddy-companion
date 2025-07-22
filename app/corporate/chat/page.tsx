@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { trackPageView } from "@/lib/analytics";
 import { AuthGuard } from '@/components/auth-guard';
