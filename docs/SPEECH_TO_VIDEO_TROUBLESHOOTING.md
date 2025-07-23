@@ -1,8 +1,37 @@
 # Speech-to-Video Troubleshooting Guide
 
+## ⚠️ IMPORTANT: Avatar Feature Availability
+
+The Azure Text-to-Speech Avatar feature is:
+1. **Only available in specific regions**: Southeast Asia, North Europe, West Europe, Sweden Central, South Central US, East US 2, and West US 2
+2. **Not included in the standard Speech SDK** - it requires special access
+3. **May require additional Azure subscription features** to be enabled
+
+If your region is `eastus` (as detected in your setup), it **does NOT support Avatar**. The system will automatically fall back to Text-to-Speech mode with a visual placeholder.
+
 ## Common Issues and Solutions
 
-### 1. Azure SDK Loading Issues
+### 1. Avatar API Not Available
+
+**Problem**: "Avatar API not available" or "AvatarConfig/AvatarSynthesizer not found"
+
+**Solutions**:
+- **Check your region**: Avatar is only supported in these regions:
+  - `southeastasia`
+  - `northeurope`
+  - `westeurope`
+  - `swedencentral`
+  - `southcentralus`
+  - `eastus2`
+  - `westus2`
+- **Your current region** (`eastus`) does NOT support Avatar
+- The system will automatically use TTS fallback mode
+- To use Avatar, you need to:
+  1. Create a new Speech resource in a supported region
+  2. Update your `.env` file with the new region and key
+  3. Restart the application
+
+### 2. Azure SDK Loading Issues
 
 **Problem**: Azure Speech SDK fails to load or times out
 
@@ -15,7 +44,7 @@
   - `https://*.cognitiveservices.azure.com`
   - `https://*.blob.core.windows.net`
 
-### 2. Invalid Azure Credentials
+### 3. Invalid Azure Credentials
 
 **Problem**: "Invalid Azure Speech credentials" error
 
@@ -31,7 +60,7 @@
 4. Verify the key hasn't expired in Azure Portal
 5. Make sure you're using a Speech Service key, not a generic Cognitive Services key
 
-### 3. Avatar Connection Failed
+### 4. Avatar Connection Failed
 
 **Problem**: Avatar fails to connect or initialize
 
@@ -42,7 +71,7 @@
 - Try using a different avatar character or style
 - Check browser compatibility (Chrome/Edge recommended)
 
-### 4. Microphone Access Issues
+### 5. Microphone Access Issues
 
 **Problem**: Speech recognition not working
 
@@ -55,7 +84,7 @@
 3. Ensure no other application is using the microphone
 4. Try using a different microphone or audio input device
 
-### 5. No Avatar Video Display
+### 6. No Avatar Video Display
 
 **Problem**: Black screen or no video element
 
@@ -66,7 +95,7 @@
 - Ensure WebRTC is not blocked
 - Check console for video element errors
 
-### 6. CORS Errors
+### 7. CORS Errors
 
 **Problem**: Cross-Origin Resource Sharing errors in console
 
@@ -76,7 +105,7 @@
 3. Check if `next.config.ts` has proper CORS headers
 4. Try using a different browser or incognito mode
 
-### 7. Speech Synthesis Not Working
+### 8. Speech Synthesis Not Working
 
 **Problem**: Avatar doesn't speak or audio is missing
 
