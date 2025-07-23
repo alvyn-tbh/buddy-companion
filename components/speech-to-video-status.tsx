@@ -115,4 +115,4 @@ export function SpeechToVideoStatus({ className = '' }: SpeechToVideoStatusProps
   );
 }
 
-export default SpeechToVideoStatus; 
+export default SpeechToVideoStatus;

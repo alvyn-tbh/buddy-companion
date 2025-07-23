@@ -159,4 +159,4 @@ If you encounter issues not covered in this guide:
 3. Open an issue on the project repository with:
    - Error messages
    - Browser and version
-   - Steps to reproduce 
+   - Steps to reproduce

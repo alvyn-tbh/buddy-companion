@@ -81,4 +81,4 @@ export function generateCacheKey(messages: ChatMessage[], assistantId: string): 
   const lastMessage = messages[messages.length - 1];
   const content = lastMessage?.content || '';
   return `${assistantId}:${content.substring(0, 100)}`; // Truncate for key length
-} 
+}

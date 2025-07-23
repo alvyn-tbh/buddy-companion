@@ -153,4 +153,4 @@ if (require.main === module) {
   monitor.start(interval);
 }
 
-export { QueueMonitor }; 
+export { QueueMonitor };

@@ -63,4 +63,4 @@ declare const webkitSpeechRecognition: SpeechRecognitionConstructor;
 interface Window {
   SpeechRecognition: SpeechRecognitionConstructor;
   webkitSpeechRecognition: SpeechRecognitionConstructor;
-} 
+}

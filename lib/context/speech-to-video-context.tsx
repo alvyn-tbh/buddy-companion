@@ -39,4 +39,4 @@ export function withSpeechToVideo<P extends object>(
   };
 }
 
-export default SpeechToVideoContext; 
+export default SpeechToVideoContext;

@@ -342,4 +342,4 @@ open http://localhost:3000/admin/queue
 
 ---
 
-**This queue system provides a robust, scalable foundation for handling high-volume chat requests with proper error handling, monitoring, and real-time updates.** 
+**This queue system provides a robust, scalable foundation for handling high-volume chat requests with proper error handling, monitoring, and real-time updates.**

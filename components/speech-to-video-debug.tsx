@@ -375,4 +375,4 @@ export function SpeechToVideoDebug() {
   );
 }
 
-export default SpeechToVideoDebug; 
+export default SpeechToVideoDebug;

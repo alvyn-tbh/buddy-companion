@@ -123,4 +123,4 @@ abstract class RequestQueue<T = unknown> {
   }
 }
 
-export { RequestQueue, type QueueItem, type QueueConfig }; 
+export { RequestQueue, type QueueItem, type QueueConfig };

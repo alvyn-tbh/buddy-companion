@@ -229,4 +229,4 @@ All chat pages now have complete audio functionality:
 1. **Audio features are automatically available** in all chat pages
 2. **No additional configuration needed** - everything is integrated
 3. **Global audio state** is managed centrally and propagated to all components
-4. **Browser compatibility** is handled automatically with graceful fallbacks 
+4. **Browser compatibility** is handled automatically with graceful fallbacks

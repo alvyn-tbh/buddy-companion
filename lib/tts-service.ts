@@ -108,4 +108,4 @@ export function validateTTSOptions(options: TTSOptions): boolean {
   }
 
   return true;
-} 
+}

@@ -51,4 +51,4 @@ If no environment variables are set, the system uses these defaults:
 3. Enable HTTPS in production
 4. Consider implementing rate limiting
 5. Monitor login attempts
-6. Use a proper JWT library like `jsonwebtoken` for production 
+6. Use a proper JWT library like `jsonwebtoken` for production

@@ -48,4 +48,4 @@ export function AuthGuard({ children, redirectTo, fallback }: AuthGuardProps) {
 
   // Render children if authenticated or if auth is not enabled
   return <>{children}</>;
-} 
+}

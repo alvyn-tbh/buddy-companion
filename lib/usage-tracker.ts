@@ -195,4 +195,4 @@ export class UsageTracker {
 }
 
 // Export singleton instance
-export const usageTracker = new UsageTracker(); 
+export const usageTracker = new UsageTracker();

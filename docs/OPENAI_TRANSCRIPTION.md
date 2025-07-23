@@ -378,4 +378,4 @@ Visit `/transcribe-test` to test the transcription functionality:
 
 This implementation provides a robust, scalable solution for audio transcription using OpenAI's Whisper API. It offers significant improvements over browser-based speech recognition while maintaining ease of use and integration with existing applications.
 
-The modular architecture allows for easy customization and extension, while the comprehensive error handling and monitoring ensure reliable operation in production environments. 
+The modular architecture allows for easy customization and extension, while the comprehensive error handling and monitoring ensure reliable operation in production environments.

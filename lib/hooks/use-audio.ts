@@ -143,4 +143,4 @@ export function useAudio(): UseAudioReturn {
     stopPlaying,
     isSpeechRecognitionSupported,
   };
-} 
+}

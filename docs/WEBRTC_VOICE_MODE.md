@@ -260,4 +260,4 @@ console.log('Data channel state:', this.dataChannel?.readyState);
 
 - [OpenAI Realtime API Documentation](https://platform.openai.com/docs/guides/realtime)
 - [WebRTC Hacks Guide](https://webrtchacks.com/the-unofficial-guide-to-openai-realtime-webrtc-api/)
-- [Community Discussion on Audio Issues](https://community.openai.com/t/realtime-webrtc-api-not-taking-audio-input/1091949) 
+- [Community Discussion on Audio Issues](https://community.openai.com/t/realtime-webrtc-api-not-taking-audio-input/1091949)

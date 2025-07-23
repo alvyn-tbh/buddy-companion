@@ -1,5 +1,3 @@
-import { createClient } from './supabase/client';
-
 // Database types
 export interface Database {
   public: {
@@ -84,8 +82,5 @@ export interface Database {
 // Export the createClient function for use in components
 export { createClient } from './supabase/client';
 
-// For backward compatibility, create a default client instance
-// This should only be used in client components
-export const supabase = createClient();
-
- 
+// Export server client creation function
+export { createClient as createServerClient } from './supabase/server';

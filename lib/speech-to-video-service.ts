@@ -417,4 +417,4 @@ export class SpeechToVideoService extends EventTarget {
   }
 }
 
-export default SpeechToVideoService; 
+export default SpeechToVideoService;

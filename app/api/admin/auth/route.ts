@@ -125,4 +125,4 @@ export async function GET(request: NextRequest) {
     console.error('Auth check error:', error);
     return NextResponse.json({ authenticated: false });
   }
-} 
+}

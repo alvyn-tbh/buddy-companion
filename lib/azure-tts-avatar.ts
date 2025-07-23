@@ -347,4 +347,4 @@ export class AzureTTSAvatar extends EventEmitter {
   }
 }
 
-export default AzureTTSAvatar; 
+export default AzureTTSAvatar;

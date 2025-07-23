@@ -148,4 +148,4 @@ function SetupStatus({ className = '' }: SetupStatusProps) {
 }
 
 export default SetupStatus;
-export { SetupStatus }; 
+export { SetupStatus };
