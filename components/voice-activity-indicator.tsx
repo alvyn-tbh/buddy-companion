@@ -1,96 +1,113 @@
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface VoiceActivityIndicatorProps {
   isActive: boolean;
   isSpeaking: boolean;
   volume: number;
-  noiseFloor: number;
+  noiseFloor?: number;
   className?: string;
 }
 
-export function VoiceActivityIndicator({
-  isActive,
-  isSpeaking,
-  volume,
-  noiseFloor,
-  className
+export function VoiceActivityIndicator({ 
+  isActive, 
+  isSpeaking, 
+  volume, 
+  noiseFloor = -50,
+  className 
 }: VoiceActivityIndicatorProps) {
+  const [displayVolume, setDisplayVolume] = useState(0);
+
+  useEffect(() => {
+    if (isActive && isSpeaking) {
+      // Normalize volume to 0-100 range
+      const normalizedVolume = Math.max(0, Math.min(100, ((volume - noiseFloor) / (0 - noiseFloor)) * 100));
+      setDisplayVolume(normalizedVolume);
+    } else {
+      setDisplayVolume(0);
+    }
+  }, [isActive, isSpeaking, volume, noiseFloor]);
+
   if (!isActive) return null;
 
-  // Calculate volume level (0-100)
-  const volumeLevel = Math.max(0, Math.min(100, ((volume - noiseFloor) / 40) * 100));
-  
-  // Calculate bar heights based on volume
-  const bars = Array(5).fill(0).map((_, i) => {
-    const threshold = (i + 1) * 20;
-    const height = volumeLevel > threshold ? 100 : (volumeLevel / threshold) * 100;
-    return Math.max(20, height); // Minimum 20% height
-  });
-
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      {/* Voice activity bars */}
-      <div className="flex items-center gap-1 h-6">
-        {bars.map((height, i) => (
+    <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700", className)}>
+      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+      <div className="flex items-center gap-0.5">
+        {[...Array(5)].map((_, i) => (
           <div
             key={i}
             className={cn(
-              "w-1 rounded-full transition-all duration-100",
-              isSpeaking ? "bg-green-500" : "bg-gray-400"
+              "w-0.5 h-3 bg-green-400 rounded-full transition-all duration-100",
+              displayVolume > (i * 20) ? "opacity-100" : "opacity-30"
             )}
-            style={{
-              height: `${height}%`,
-              opacity: isSpeaking ? 1 : 0.5
-            }}
           />
         ))}
       </div>
-      
-      {/* Status text */}
-      <span className={cn(
-        "text-xs font-medium transition-colors",
-        isSpeaking ? "text-green-600" : "text-gray-500"
-      )}>
-        {isSpeaking ? "Speaking" : "Listening"}
-      </span>
-      
-      {/* Noise floor indicator */}
-      <span className="text-xs text-gray-400">
-        NF: {noiseFloor.toFixed(0)}dB
+      <span className="text-xs text-green-700 dark:text-green-300 font-medium">
+        {isSpeaking ? 'Speaking' : 'Listening'}
       </span>
     </div>
   );
 }
 
-// Minimal voice indicator for tight spaces
-export function MiniVoiceIndicator({ isSpeaking, volume, className }: { 
-  isSpeaking: boolean; 
-  volume: number; 
+interface MiniVoiceIndicatorProps {
+  isActive: boolean;
+  isSpeaking: boolean;
+  status: string;
+  conversationTurn?: number;
   className?: string;
-}) {
-  const size = isSpeaking ? Math.min(16, 8 + (volume + 50) / 10) : 8;
-  
+}
+
+export function MiniVoiceIndicator({ 
+  isActive, 
+  isSpeaking, 
+  status,
+  conversationTurn = 0,
+  className 
+}: MiniVoiceIndicatorProps) {
+  if (!isActive) return null;
+
+  const getStatusColor = () => {
+    if (status.includes('Error')) return 'red';
+    if (isSpeaking) return 'green';
+    if (status.includes('Processing') || status.includes('Getting')) return 'blue';
+    if (status.includes('Ready') || status.includes('Connected')) return 'purple';
+    return 'gray';
+  };
+
+  const color = getStatusColor();
+
   return (
-    <div className={cn("relative", className)}>
-      <div 
-        className={cn(
-          "rounded-full transition-all duration-200",
-          isSpeaking ? "bg-green-500" : "bg-gray-400"
+    <div className={cn("flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-gray-800 border shadow-sm", className)}>
+      <div className={cn(
+        "w-2 h-2 rounded-full",
+        color === 'red' && "bg-red-500",
+        color === 'green' && "bg-green-500 animate-pulse",
+        color === 'blue' && "bg-blue-500 animate-spin",
+        color === 'purple' && "bg-purple-500",
+        color === 'gray' && "bg-gray-400"
+      )} />
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+          🎬
+        </span>
+        <span className={cn(
+          "text-xs font-medium",
+          color === 'red' && "text-red-700 dark:text-red-300",
+          color === 'green' && "text-green-700 dark:text-green-300",
+          color === 'blue' && "text-blue-700 dark:text-blue-300",
+          color === 'purple' && "text-purple-700 dark:text-purple-300",
+          color === 'gray' && "text-gray-700 dark:text-gray-300"
+        )}>
+          {isSpeaking ? 'Speaking' : status.includes('Ready') ? 'Ready' : 'Processing'}
+        </span>
+        {conversationTurn > 0 && (
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            #{conversationTurn}
+          </span>
         )}
-        style={{
-          width: `${size}px`,
-          height: `${size}px`,
-          opacity: isSpeaking ? 1 : 0.5
-        }}
-      />
-      {isSpeaking && (
-        <div 
-          className="absolute inset-0 rounded-full bg-green-500 animate-ping"
-          style={{
-            animationDuration: '1s'
-          }}
-        />
-      )}
+      </div>
     </div>
   );
 }

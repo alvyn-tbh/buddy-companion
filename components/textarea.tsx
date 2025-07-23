@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Textarea as TextareaComponent } from "./ui/textarea";
-import { SendHorizontal, StopCircle, Mic, MicOff, Radio, Video } from "lucide-react";
+import { SendHorizontal, StopCircle, Mic, MicOff, Radio, Video, VideoOff } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { RealtimeWebRTC } from "../lib/realtime-webrtc";
@@ -49,6 +49,7 @@ export function Textarea({
   const [videoConnectionStatus, setVideoConnectionStatus] = useState<string>('');
   const [avatarSpeaking, setAvatarSpeaking] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [conversationTurn, setConversationTurn] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -56,8 +57,7 @@ export function Textarea({
   const isProcessingRef = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const realtimeRef = useRef<RealtimeWebRTC | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const azureAvatarRef = useRef<any | null>(null);
+  const speechToVideoServiceRef = useRef<SpeechToVideoService | null>(null);
   const maxRecordingTime = 300000; // 5 minutes max recording time
   const silenceThreshold = 5000; // 5 seconds of silence
 
@@ -99,6 +99,11 @@ export function Textarea({
     return () => {
       if (realtimeRef.current) {
         realtimeRef.current.disconnect();
+      }
+      
+      // Cleanup speech-to-video service
+      if (speechToVideoServiceRef.current) {
+        speechToVideoServiceRef.current.disconnect();
       }
     };
   }, []);
@@ -158,21 +163,34 @@ export function Textarea({
   const toggleSpeechToVideo = useCallback(async () => {
     if (isSpeechToVideoActive) {
       // Stop speech-to-video mode
-      if (azureAvatarRef.current) {
-        azureAvatarRef.current.disconnect();
-        azureAvatarRef.current = null;
+      console.log('🛑 [Textarea] Stopping speech-to-video mode...');
+      
+      if (speechToVideoServiceRef.current) {
+        await speechToVideoServiceRef.current.disconnect();
+        speechToVideoServiceRef.current = null;
       }
+      
       setIsSpeechToVideoActive(false);
       setIsVideoConnecting(false);
       setVideoConnectionStatus('');
       setAvatarSpeaking(false);
       setAvatarError(null);
+      setConversationTurn(0);
+      
+      // Remove video element
+      const existingVideo = document.querySelector('.speech-to-video-avatar');
+      if (existingVideo) {
+        existingVideo.remove();
+      }
+      
       toast.info("Speech-to-video conversation stopped");
     } else {
       // Start speech-to-video mode with corporate integration
       try {
+        console.log('🎬 [Textarea] Starting speech-to-video mode...');
         setIsVideoConnecting(true);
         setVideoConnectionStatus('Initializing...');
+        setAvatarError(null);
         
         // Get Azure credentials
         const speechKey = process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY;
@@ -209,8 +227,6 @@ export function Textarea({
           throw new Error(errorMsg);
         }
 
-        // Create speech-to-video service instance
-
         // Create a video element for the avatar
         const videoElement = document.createElement('video');
         videoElement.className = 'speech-to-video-avatar';
@@ -218,65 +234,95 @@ export function Textarea({
           position: fixed;
           top: 20px;
           right: 20px;
-          width: 300px;
-          height: 225px;
+          width: 320px;
+          height: 240px;
           border-radius: 12px;
           box-shadow: 0 10px 25px rgba(0,0,0,0.2);
           z-index: 1000;
           background: #000;
+          border: 2px solid #e2e8f0;
         `;
         document.body.appendChild(videoElement);
 
-        // Initialize speech-to-video service with corporate integration
+        // Initialize speech-to-video service with enhanced configuration
         const speechToVideoService = new SpeechToVideoService({
           speechKey,
           speechRegion,
           avatarCharacter: 'lisa',
           avatarStyle: 'casual-sitting',
           voice: 'en-US-JennyNeural',
-          corporateApiUrl: '/api/corporate'
+          corporateApiUrl: '/api/corporate',
+          enableVAD: true,
+          silenceTimeout: 4000, // 4 seconds silence timeout
+          autoRestart: true
         });
 
-        // Set up event listeners
+        // Set up comprehensive event listeners
         speechToVideoService.addEventListener('ready', () => {
+          console.log('✅ [Textarea] Speech-to-video service ready');
           setIsSpeechToVideoActive(true);
           setIsVideoConnecting(false);
           setVideoConnectionStatus('Ready - Start speaking!');
           setAvatarError(null);
+          setConversationTurn(0);
           toast.success("🎬 Speech-to-video conversation started! Start speaking now.");
-          
-          // Start listening immediately
-          speechToVideoService.startListening();
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         speechToVideoService.addEventListener('stateChange', (event: any) => {
           const state = event.detail;
+          console.log('🔄 [Textarea] Speech-to-video state changed:', state);
+          
           setVideoConnectionStatus(state.connectionStatus);
           setAvatarSpeaking(state.isSpeaking);
+          setConversationTurn(state.conversationTurn);
           
-          if (state.transcript) {
+          if (state.transcript && state.transcript.trim()) {
             // Show the user's speech as input
             handleInputChange({ target: { value: state.transcript } });
+          }
+          
+          // Notify parent component
+          if (onSpeechToVideoStateChange) {
+            onSpeechToVideoStateChange({
+              isActive: state.isActive,
+              isConnecting: state.isConnecting,
+              connectionStatus: state.connectionStatus,
+              isSpeaking: state.isSpeaking,
+              error: state.error,
+              isReady: state.isActive && !state.isConnecting && !state.error
+            });
           }
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         speechToVideoService.addEventListener('error', (event: any) => {
           const error = event.detail;
-          console.error('Speech-to-video error:', error);
+          console.error('❌ [Textarea] Speech-to-video error:', error);
           setAvatarError(error);
           setVideoConnectionStatus('Error');
           setIsVideoConnecting(false);
-          toast.error(`Speech-to-video error: ${error}`);
+          
+          // Show user-friendly error message
+          if (error.includes('Microphone access denied')) {
+            toast.error('🎤 Microphone access required for speech-to-video. Please allow microphone access and try again.');
+          } else if (error.includes('Speech recognition not supported')) {
+            toast.error('🎤 Speech recognition not supported in this browser. Please use Chrome, Edge, or Safari.');
+          } else if (error.includes('Azure')) {
+            toast.error('☁️ Azure Speech Service error. Please check your configuration.');
+          } else {
+            toast.error(`Speech-to-video error: ${error}`);
+          }
         });
 
         speechToVideoService.addEventListener('disconnected', () => {
+          console.log('🔌 [Textarea] Speech-to-video service disconnected');
           setIsSpeechToVideoActive(false);
           setIsVideoConnecting(false);
           setVideoConnectionStatus('Disconnected');
           setAvatarSpeaking(false);
           setAvatarError(null);
+          setConversationTurn(0);
           
           // Remove video element
           const existingVideo = document.querySelector('.speech-to-video-avatar');
@@ -286,31 +332,48 @@ export function Textarea({
         });
 
         // Initialize the service
+        console.log('🚀 [Textarea] Initializing speech-to-video service...');
         await speechToVideoService.initialize(videoElement);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        azureAvatarRef.current = speechToVideoService as any;
+        speechToVideoServiceRef.current = speechToVideoService;
         
       } catch (error) {
-        console.error('Error starting speech-to-video mode:', error);
+        console.error('❌ [Textarea] Error starting speech-to-video mode:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error(`Error starting speech-to-video: ${errorMessage}`);
         setIsVideoConnecting(false);
         setVideoConnectionStatus('');
+        setAvatarError(errorMessage);
+        
+        // Remove video element on error
+        const existingVideo = document.querySelector('.speech-to-video-avatar');
+        if (existingVideo) {
+          existingVideo.remove();
+        }
       }
     }
-  }, [isSpeechToVideoActive, handleInputChange]);
-
-
+  }, [isSpeechToVideoActive, handleInputChange, onSpeechToVideoStateChange]);
 
   // Get current speech-to-video state
   const getSpeechToVideoState = useCallback(() => {
+    const service = speechToVideoServiceRef.current;
+    if (service && service.isReady()) {
+      const state = service.getState();
+      return {
+        isActive: state.isActive,
+        isConnecting: state.isConnecting,
+        connectionStatus: state.connectionStatus,
+        isSpeaking: state.isSpeaking,
+        error: state.error,
+        isReady: state.isActive && !state.isConnecting && !state.error
+      };
+    }
+    
     return {
       isActive: isSpeechToVideoActive,
       isConnecting: isVideoConnecting,
       connectionStatus: videoConnectionStatus,
       isSpeaking: avatarSpeaking,
       error: avatarError,
-      isReady: azureAvatarRef.current?.isReady() || false
+      isReady: isSpeechToVideoActive && !isVideoConnecting && !avatarError
     };
   }, [isSpeechToVideoActive, isVideoConnecting, videoConnectionStatus, avatarSpeaking, avatarError]);
 
@@ -398,318 +461,308 @@ export function Textarea({
         // Combine all audio chunks into a single blob
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
-        if (audioBlob.size > 0) {
-          // Transcribe using OpenAI API
-          const transcription = await transcribeAudioWithOpenAI(audioBlob);
-          
-          if (transcription.trim()) {
-            handleInputChange({ target: { value: transcription.trim() } });
-            toast.success("Transcription completed!");
-          } else {
-            toast.warning("No speech detected in the recording");
-          }
-        } else {
-          toast.error("No audio data recorded");
+        if (audioBlob.size === 0) {
+          throw new Error('No audio recorded');
         }
+
+        // Transcribe the audio
+        const transcribedText = await transcribeAudioWithOpenAI(audioBlob);
+        
+        if (transcribedText.trim()) {
+          // Update the input with transcribed text
+          handleInputChange({ target: { value: transcribedText } });
+          toast.success('Speech transcribed successfully!');
+        } else {
+          throw new Error('No speech detected in recording');
+        }
+        
       } catch (error) {
         console.error('Error processing audio:', error);
-        toast.error("Error transcribing audio recording");
+        toast.error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsTranscribing(false);
-        isProcessingRef.current = false;
+        cleanupAudioResources();
+      }
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        });
+        
+        streamRef.current = stream;
+        
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus'
+        });
+        
+        mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        mediaRecorder.onstop = () => {
+          console.log('Recording stopped');
+        };
+        
+        mediaRecorder.onerror = (event) => {
+          console.error('MediaRecorder error:', event);
+          toast.error('Recording error occurred');
+          cleanupAudioResources();
+        };
+        
+        // Start recording
+        mediaRecorder.start(1000); // Collect data every second
+        setIsRecording(true);
+        setRecordingStartTime(Date.now());
+        toast.success('Recording started - Speak now!');
+        
+        // Set maximum recording time
+        const maxRecordingTimer = setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            toast.info('Maximum recording time reached');
+          }
+        }, maxRecordingTime);
+        
+        // Set silence detection timer
+        const silenceTimer = setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            toast.info('Recording stopped due to silence');
+          }
+        }, silenceThreshold);
+        
+        silenceTimerRef.current = silenceTimer;
+        
+        // Clear timers when recording stops
+        const originalStop = mediaRecorder.stop.bind(mediaRecorder);
+        mediaRecorder.stop = () => {
+          clearTimeout(maxRecordingTimer);
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+          originalStop();
+        };
+        
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        toast.error('Failed to start recording. Please check microphone permissions.');
+        cleanupAudioResources();
       }
-      
-      return;
     }
+  }, [isRecording, handleInputChange, transcribeAudioWithOpenAI, cleanupAudioResources]);
 
-    // Start recording
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      
-      streamRef.current = stream;
-      audioChunksRef.current = [];
-      setRecordingStartTime(Date.now());
+  // Get recording duration
+  const getRecordingDuration = useCallback(() => {
+    if (!recordingStartTime || !isRecording) return 0;
+    return Math.floor((Date.now() - recordingStartTime) / 1000);
+  }, [recordingStartTime, isRecording]);
 
-      // Start MediaRecorder
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : 'audio/webm';
+  // Format duration for display
+  const formatDuration = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
 
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-
-      mediaRecorderRef.current.ondataavailable = (event: BlobEvent) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        // Audio recording stopped, will be processed in handleMicClick
-        isProcessingRef.current = false;
-      };
-
-      mediaRecorderRef.current.start(1000);
-      setIsRecording(true);
-      
-      // Start silence detection timer
-      silenceTimerRef.current = setTimeout(() => {
-        if (isRecording) {
-          toast.info("Stopping recording due to silence...");
-          handleMicClick(); // Stop recording
-        }
-      }, silenceThreshold);
-      
-      toast.success("Recording started... Speak now!");
-    } catch (error) {
-      console.error("Error starting recording:", error);
-      toast.error("Could not access microphone");
-      setIsRecording(false);
-    }
-  }, [isRecording, handleInputChange, silenceThreshold, transcribeAudioWithOpenAI]);
-
-  // Check for maximum recording time
+  // Update recording duration display
+  const [recordingDuration, setRecordingDuration] = useState(0);
   useEffect(() => {
-    if (recordingStartTime && isRecording) {
-      const timer = setInterval(() => {
-        const elapsed = Date.now() - recordingStartTime;
-        if (elapsed >= maxRecordingTime) {
-          toast.warning("Maximum recording time reached (5 minutes)");
-          handleMicClick(); // Stop recording
-        }
+    let interval: NodeJS.Timeout;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingDuration(getRecordingDuration());
       }, 1000);
-
-      return () => clearInterval(timer);
     }
-  }, [recordingStartTime, isRecording, maxRecordingTime, handleMicClick]);
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
-      cleanupAudioResources();
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-      if (realtimeRef.current) {
-        realtimeRef.current.disconnect();
-      }
-      if (azureAvatarRef.current) {
-        azureAvatarRef.current.disconnect();
-      }
+      if (interval) clearInterval(interval);
     };
-  }, [cleanupAudioResources]);
+  }, [isRecording, getRecordingDuration]);
 
-  // Prevent recording when loading, but allow stopping when recording
-  const canRecord = !isLoading && !isTranscribing && (!isProcessingRef.current || isRecording);
+  const isActiveInput = input.trim().length > 0;
+  const canSubmit = isActiveInput && !isLoading && !isTranscribing;
+
+  const shouldShowVoiceButton = !isSpeechToVideoActive; // Hide voice button when speech-to-video is active
+  const shouldShowVideoButton = !isVoiceModeActive; // Hide video button when voice mode is active
 
   return (
-    <div className="relative">
-      <TextareaComponent
-        value={input}
-        onChange={handleInputChange}
-        placeholder="Type your message or click the microphone to speak..."
-        className="min-h-[60px] w-full resize-none bg-transparent px-4 py-[1.3rem] focus-within:outline-none sm:text-sm"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (input.trim()) {
-              const formEvent = {
-                preventDefault: () => { },
-              } as React.FormEvent<HTMLFormElement>;
-              handleSubmit(formEvent);
+    <form
+      onSubmit={handleSubmit}
+      className="relative flex items-end gap-2 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700"
+    >
+      {/* Voice Mode Button */}
+      {shouldShowVoiceButton && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={toggleVoiceMode}
+          disabled={isConnecting || isVideoConnecting}
+          className={`
+            shrink-0 transition-all duration-200 
+            ${isVoiceModeActive 
+              ? 'bg-green-100 border-green-300 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:border-green-700 dark:text-green-300' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
             }
-          }
-        }}
-      />
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        {/* Voice Mode Button (Radio Icon for Speech-to-Speech) */}
-        <div className="relative">
-          <Button
-            variant={isVoiceModeActive ? "default" : "ghost"}
-            size="icon"
-            className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
-            onClick={toggleVoiceMode}
-            disabled={isLoading || isRecording || isTranscribing || isConnecting}
-            title={isVoiceModeActive ? "Stop speech-to-speech mode" : "Start speech-to-speech mode"}
-          >
-            {isVoiceModeActive ? (
-              <Radio className="h-5 w-5 text-white animate-pulse" />
-            ) : isConnecting ? (
-              <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Radio className="h-5 w-5" />
-            )}
-          </Button>
-          {isVoiceModeActive && connectionStatus === 'Connected' && (
-            <MiniVoiceIndicator
+          `}
+          title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
+        >
+          {isConnecting ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+          ) : (
+            <Radio className={`h-4 w-4 ${isVoiceModeActive ? 'animate-pulse' : ''}`} />
+          )}
+        </Button>
+      )}
+
+      {/* Speech-to-Video Mode Button */}
+      {shouldShowVideoButton && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={toggleSpeechToVideo}
+          disabled={isVideoConnecting || isConnecting}
+          className={`
+            shrink-0 transition-all duration-200 
+            ${isSpeechToVideoActive 
+              ? 'bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+            }
+          `}
+          title={isSpeechToVideoActive ? "Stop speech-to-video" : "Start speech-to-video conversation"}
+        >
+          {isVideoConnecting ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+          ) : isSpeechToVideoActive ? (
+            <VideoOff className="h-4 w-4" />
+          ) : (
+            <Video className="h-4 w-4" />
+          )}
+        </Button>
+      )}
+
+      {/* Voice Activity Status */}
+      {(isVoiceModeActive || isSpeechToVideoActive) && (
+        <div className="shrink-0">
+          {isVoiceModeActive ? (
+            <VoiceActivityIndicator 
+              isActive={isVoiceModeActive}
               isSpeaking={isSpeaking}
               volume={volume}
-              className="absolute -top-1 -right-1"
+            />
+          ) : (
+            <MiniVoiceIndicator 
+              isActive={isSpeechToVideoActive}
+              isSpeaking={avatarSpeaking}
+              status={videoConnectionStatus}
+              conversationTurn={conversationTurn}
             />
           )}
         </div>
+      )}
 
-        {/* Speech-to-Video Button (AI Avatar Conversation) */}
-        <div className="relative">
+      {/* Main Textarea Container */}
+      <div className="flex-1 relative">
+        <TextareaComponent
+          value={input}
+          onChange={handleInputChange}
+          placeholder={
+            isVoiceModeActive 
+              ? "Voice mode active - speak to interact..." 
+              : isSpeechToVideoActive
+              ? "Speech-to-video active - speak to the avatar..."
+              : "Type your message here..."
+          }
+          disabled={isLoading || isTranscribing || isVoiceModeActive || (isSpeechToVideoActive && avatarSpeaking)}
+          className="min-h-[60px] max-h-[200px] resize-none pr-24 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400"
+          rows={3}
+        />
+
+        {/* Recording/Voice Controls */}
+        <div className="absolute right-2 bottom-2 flex items-center gap-2">
+          {/* Recording Duration */}
+          {isRecording && (
+            <div className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+              🔴 {formatDuration(recordingDuration)}
+            </div>
+          )}
+
+          {/* Transcribing Indicator */}
+          {isTranscribing && (
+            <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+              Processing...
+            </div>
+          )}
+
+          {/* Mic Button (only show when not in special modes) */}
+          {!isVoiceModeActive && !isSpeechToVideoActive && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleMicClick}
+              disabled={isLoading || isTranscribing}
+              className={`
+                h-8 w-8 p-0 transition-all duration-200 
+                ${isRecording 
+                  ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900 dark:text-red-400' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }
+              `}
+              title={isRecording ? "Stop recording" : "Start voice recording"}
+            >
+              {isTranscribing ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+              ) : isRecording ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+
+          {/* Submit/Stop Button */}
           <Button
-            variant={isSpeechToVideoActive ? "default" : "ghost"}
-            size="icon"
-            className={`h-8 w-8 ${isSpeechToVideoActive ? 'bg-purple-500 hover:bg-purple-600 shadow-lg' : 'hover:bg-purple-50 dark:hover:bg-purple-900/20'}`}
-            onClick={toggleSpeechToVideo}
-            disabled={isLoading || isRecording || isTranscribing || isVideoConnecting || isVoiceModeActive}
-            title={isSpeechToVideoActive ? "Stop AI avatar conversation" : "Start AI avatar conversation"}
+            type={isLoading ? "button" : "submit"}
+            onClick={isLoading ? stop : undefined}
+            disabled={!canSubmit && !isLoading}
+            size="sm"
+            className="h-8 w-8 p-0 transition-all duration-200"
+            title={isLoading ? "Stop generation" : "Send message"}
           >
-            {isSpeechToVideoActive ? (
-              <Video className="h-5 w-5 text-white animate-pulse" />
-            ) : isVideoConnecting ? (
-              <div className="h-5 w-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            {isLoading ? (
+              <StopCircle className="h-4 w-4" />
             ) : (
-              <Video className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <SendHorizontal className="h-4 w-4" />
             )}
           </Button>
-          {isSpeechToVideoActive && (
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          )}
         </div>
-
-        {/* Microphone Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-8 w-8 ${isRecording ? 'animate-pulse bg-red-100 dark:bg-red-900' : ''}`}
-          onClick={handleMicClick}
-          disabled={!canRecord || isVoiceModeActive}
-          title={isRecording ? "Stop recording" : "Start voice recording"}
-        >
-          {isRecording ? (
-            <MicOff className="h-5 w-5 text-red-500" />
-          ) : isTranscribing ? (
-            <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Mic className="h-5 w-5" />
-          )}
-        </Button>
-
-        {/* Send/Stop Button */}
-        {isLoading || isRecording ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={isRecording ? handleMicClick : stop}
-          >
-            <StopCircle className="h-5 w-5" />
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={!input.trim() || isRecording || isTranscribing || isVoiceModeActive}
-            onClick={() => {
-              if (input.trim()) {
-                const formEvent = {
-                  preventDefault: () => { },
-                } as React.FormEvent<HTMLFormElement>;
-                handleSubmit(formEvent);
-              }
-            }}
-          >
-            <SendHorizontal className="h-5 w-5" />
-          </Button>
-        )}
       </div>
 
-      {/* Voice Mode Status Indicators */}
-      {isVoiceModeActive && (
-        <div className="absolute -top-12 left-0 right-0 text-center">
-          <div className="inline-flex flex-col items-center gap-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-              <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-              Voice Mode {connectionStatus || 'Connecting...'}
-            </div>
-            {connectionStatus === 'Connected' && (
-              <VoiceActivityIndicator
-                isActive={true}
-                isSpeaking={isSpeaking}
-                volume={volume}
-                noiseFloor={noiseFloor}
-                className="bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm"
-              />
+      {/* Status Messages */}
+      {(connectionStatus || videoConnectionStatus) && (
+        <div className="absolute -top-8 left-4 right-4">
+          <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
+            {isVoiceModeActive ? connectionStatus : videoConnectionStatus}
+            {isSpeechToVideoActive && conversationTurn > 0 && (
+              <span className="ml-2 text-blue-600 dark:text-blue-400">
+                Turn #{conversationTurn}
+              </span>
             )}
           </div>
         </div>
       )}
-
-      {/* Recording Status Indicator */}
-      {isRecording && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-full text-sm">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            Recording... Click to stop
-          </div>
-        </div>
-      )}
-
-      {/* Transcribing Status Indicator */}
-      {isTranscribing && (
-        <div className="absolute -top-8 left-0 right-0 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-spin"></div>
-            Transcribing with OpenAI...
-          </div>
-        </div>
-      )}
-
-      {/* Voice Mode Transcript Display */}
-      {isVoiceModeActive && transcript && (
-        <div className="absolute -top-24 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
-          <div className="mb-2">
-            <span className="text-xs font-medium text-gray-500">You said:</span>
-            <p className="text-sm">{transcript}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Speech-to-Video Status Indicator */}
-      {(isSpeechToVideoActive || isVideoConnecting) && (
-        <div className="absolute -top-16 left-0 right-0 text-center">
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm shadow-md ${
-            avatarError 
-              ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-              : avatarSpeaking
-                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-                : isVideoConnecting
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                  : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-          }`}>
-            <Video className="w-3 h-3" />
-            <div className={`w-2 h-2 rounded-full ${
-              avatarError
-                ? 'bg-red-500'
-                : avatarSpeaking 
-                  ? 'bg-green-500 animate-pulse'
-                  : isVideoConnecting
-                    ? 'bg-blue-500 animate-spin'
-                    : 'bg-purple-500 animate-pulse'
-            }`}></div>
-            {avatarError 
-              ? 'Avatar Error'
-              : avatarSpeaking 
-                ? 'AI Avatar Speaking...'
-                : isVideoConnecting
-                  ? 'Connecting Avatar...'
-                  : `AI Avatar ${videoConnectionStatus || 'Ready'}`
-            }
-          </div>
-        </div>
-      )}
-    </div>
+    </form>
   );
 }

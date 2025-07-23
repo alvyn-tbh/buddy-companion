@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Textarea } from './textarea';
 import { VideoAvatar } from './video-avatar';
 import { Card } from './ui/card';
@@ -8,12 +8,16 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { AzureTTSAvatarSDK, AvatarConfig } from '@/lib/azure-tts-avatar-sdk';
 import { SpeechToVideoDebug } from './speech-to-video-debug';
+import { SpeechToVideoService } from '@/lib/speech-to-video-service';
 import { toast } from 'sonner';
 import {
   Play,
   RotateCcw,
   AlertCircle,
-  Loader2
+  Loader2,
+  Trash2,
+  Settings,
+  Volume2
 } from 'lucide-react';
 
 interface SpeechToVideoExampleProps {
@@ -21,7 +25,6 @@ interface SpeechToVideoExampleProps {
 }
 
 export function SpeechToVideoExample({ className = '' }: SpeechToVideoExampleProps) {
-  // FIXED: Removed all speechToVideoState references - using avatarState now
   // Local state for the example
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,13 +35,18 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
     timestamp: Date;
   }>>([]);
   const [currentAvatar, setCurrentAvatar] = useState<AzureTTSAvatarSDK | null>(null);
+  const [speechToVideoService, setSpeechToVideoService] = useState<SpeechToVideoService | null>(null);
   const [avatarState, setAvatarState] = useState({
     isActive: false,
     isConnecting: false,
     connectionStatus: 'Disconnected',
     error: null as string | null,
-    isReady: false
+    isReady: false,
+    isSpeaking: false,
+    conversationTurn: 0
   });
+
+  const speechToVideoServiceRef = useRef<SpeechToVideoService | null>(null);
 
   // Check if Azure credentials are available
   const isAvailable = !!(
@@ -76,10 +84,62 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
     setIsLoading(true);
 
     try {
-      // Simulate AI response (replace with actual AI call)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const aiResponse = `I understand you said: "${input.trim()}". This is a demo response from the AI avatar system using Azure Text-to-Speech technology.`;
+      // Call corporate API
+      const response = await fetch('/api/corporate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are a helpful corporate AI assistant. Provide concise, professional responses suitable for voice conversation. Keep responses under 100 words for natural speech flow.' },
+            { role: 'user', content: input.trim() }
+          ],
+          existingThreadId: `example-${Date.now()}`
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let fullResponse = '';
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith('0:"')) {
+              const match = line.match(/^0:"(.*)"/);
+              if (match) {
+                const content = match[1]
+                  .replace(/\\"/g, '"')
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\r/g, '\r')
+                  .replace(/\\t/g, '\t')
+                  .replace(/\\\\/g, '\\');
+                fullResponse += content;
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      const aiResponse = fullResponse.trim();
       
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
@@ -121,12 +181,39 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
   const handleAvatarError = useCallback((error: Error) => {
     console.error('Avatar error:', error);
     setCurrentAvatar(null);
+    setAvatarState(prev => ({ ...prev, isReady: false, error: error.message }));
+  }, []);
+
+  // Handle speech-to-video state changes
+  const handleSpeechToVideoStateChange = useCallback((state: {
+    isActive: boolean;
+    isConnecting: boolean;
+    connectionStatus: string;
+    isSpeaking: boolean;
+    error: string | null;
+    isReady: boolean;
+  }) => {
+    setAvatarState(prev => ({
+      ...prev,
+      isActive: state.isActive,
+      isConnecting: state.isConnecting,
+      connectionStatus: state.connectionStatus,
+      isSpeaking: state.isSpeaking,
+      error: state.error,
+      isReady: state.isReady
+    }));
   }, []);
 
   // Clear conversation
   const clearConversation = useCallback(() => {
     setMessages([]);
     setInput('');
+    
+    // Clear conversation in speech-to-video service
+    if (speechToVideoServiceRef.current) {
+      speechToVideoServiceRef.current.clearConversation();
+    }
+    
     toast.info('Conversation cleared');
   }, []);
 
@@ -151,6 +238,33 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
     }
   }, [avatarState.isReady, currentAvatar]);
 
+  // Reset avatar connection
+  const resetAvatar = useCallback(() => {
+    if (currentAvatar) {
+      currentAvatar.disconnect();
+      setCurrentAvatar(null);
+      setAvatarState({
+        isActive: false,
+        isConnecting: false,
+        connectionStatus: 'Disconnected',
+        error: null,
+        isReady: false,
+        isSpeaking: false,
+        conversationTurn: 0
+      });
+      toast.info('Avatar connection reset');
+    }
+  }, [currentAvatar]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (speechToVideoServiceRef.current) {
+        speechToVideoServiceRef.current.disconnect();
+      }
+    };
+  }, []);
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Header */}
@@ -169,19 +283,7 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
         isConnecting={avatarState.isConnecting}
         connectionStatus={avatarState.connectionStatus}
         error={avatarState.error}
-        onRetry={() => {
-          if (currentAvatar) {
-            currentAvatar.disconnect();
-            setCurrentAvatar(null);
-            setAvatarState({
-              isActive: false,
-              isConnecting: false,
-              connectionStatus: 'Disconnected',
-              error: null,
-              isReady: false
-            });
-          }
-        }}
+        onRetry={resetAvatar}
       />
 
       {/* Main Interface */}
@@ -190,16 +292,30 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
         <Card className="p-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Conversation</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold">Conversation</h3>
+                <Badge variant={avatarState.isActive ? 'default' : 'secondary'}>
+                  {avatarState.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                {avatarState.conversationTurn > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    Turn #{avatarState.conversationTurn}
+                  </Badge>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                                  onClick={testAvatarSpeech}
-                disabled={!avatarState.isReady}
+                  onClick={testAvatarSpeech}
+                  disabled={!avatarState.isReady || avatarState.isSpeaking}
                   className="text-xs"
                 >
-                  <Play className="h-3 w-3 mr-1" />
+                  {avatarState.isSpeaking ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Volume2 className="h-3 w-3 mr-1" />
+                  )}
                   Test Avatar
                 </Button>
                 <Button
@@ -208,7 +324,7 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
                   onClick={clearConversation}
                   className="text-xs"
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" />
+                  <Trash2 className="h-3 w-3 mr-1" />
                   Clear
                 </Button>
               </div>
@@ -218,7 +334,9 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
             <div className="h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50 dark:bg-gray-900">
               {messages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
-                  Start a conversation to see messages here...
+                  <div className="text-4xl mb-2">🎬</div>
+                  <p>Start a speech-to-video conversation!</p>
+                  <p className="text-sm mt-1">Use the speech-to-video button below to begin</p>
                 </div>
               ) : (
                 messages.map((message) => (
@@ -262,6 +380,7 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
                 stop={stop}
                 handleSubmit={handleSubmit}
                 voice="alloy"
+                onSpeechToVideoStateChange={handleSpeechToVideoStateChange}
               />
             </form>
           </div>
@@ -276,6 +395,11 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
                 <Badge variant={avatarState.isActive ? 'default' : 'secondary'}>
                   {avatarState.isActive ? 'Active' : 'Inactive'}
                 </Badge>
+                {avatarState.isSpeaking && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 animate-pulse">
+                    Speaking...
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -283,13 +407,13 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
               config={avatarConfig}
               onAvatarReady={handleAvatarReady}
               onAvatarError={handleAvatarError}
-              onStateChange={(state) => setAvatarState({
-                isActive: state.isConnected,
+              onStateChange={(state) => setAvatarState(prev => ({
+                ...prev,
                 isConnecting: state.isConnecting,
                 connectionStatus: state.connectionStatus,
                 error: state.error,
                 isReady: state.isConnected
-              })}
+              }))}
               className="w-full"
             />
 
@@ -310,26 +434,38 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
 
       {/* Instructions */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">How to Use</h3>
+        <h3 className="text-lg font-semibold mb-4">How to Use Speech-to-Video</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div className="space-y-2">
             <h4 className="font-medium">Getting Started:</h4>
             <ul className="space-y-1 text-gray-600 dark:text-gray-400">
-              <li>1. Click the video icon to activate avatar mode</li>
-              <li>2. Type a message or use voice input</li>
-              <li>3. Watch the AI respond through the avatar</li>
-              <li>4. Use &quot;Test Avatar&quot; to verify functionality</li>
+              <li>1. Click the 🎬 video icon to start speech-to-video mode</li>
+              <li>2. Allow microphone access when prompted</li>
+              <li>3. Start speaking - your words will be transcribed</li>
+              <li>4. Watch the AI respond through the avatar</li>
+              <li>5. Continue the conversation naturally</li>
             </ul>
           </div>
           <div className="space-y-2">
             <h4 className="font-medium">Features:</h4>
             <ul className="space-y-1 text-gray-600 dark:text-gray-400">
-              <li>• Real-time speech-to-video conversion</li>
-              <li>• Azure Text-to-Speech integration</li>
-              <li>• Multiple avatar characters and voices</li>
-              <li>• Comprehensive state management</li>
+              <li>• Continuous speech recognition</li>
+              <li>• Real-time GPT processing</li>
+              <li>• Azure Text-to-Speech avatar video</li>
+              <li>• Automatic conversation management</li>
+              <li>• Error recovery and reconnection</li>
             </ul>
           </div>
+        </div>
+        
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">💡 Pro Tips</h4>
+          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+            <li>• Speak clearly and at normal pace</li>
+            <li>• Wait for the avatar to finish speaking before continuing</li>
+            <li>• Use the reset button if you encounter connection issues</li>
+            <li>• Keep responses conversational for best avatar performance</li>
+          </ul>
         </div>
       </Card>
     </div>
