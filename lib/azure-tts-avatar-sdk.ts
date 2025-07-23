@@ -188,21 +188,18 @@ export class AzureTTSAvatarSDK extends EventTarget {
         return;
       }
 
-      // Load Speech SDK
-      await this.loadSpeechSDK();
+      // Enhanced credential validation based on Azure troubleshooting guide
+      if (!this.config.speechKey || this.config.speechKey.length < 32) {
+        throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
+      }
 
-              // Enhanced credential validation based on Azure troubleshooting guide
-        if (!this.config.speechKey || this.config.speechKey.length < 32) {
-          throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
-        }
+      if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
+        throw new Error('Invalid Azure Speech Region format');
+      }
 
-        if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
-          throw new Error('Invalid Azure Speech Region format');
-        }
-
-        // Validate credentials with Azure service
-        this.updateState({ connectionStatus: 'Validating Azure credentials...' });
-        await this.validateAzureCredentials();
+      // Validate credentials with Azure service
+      this.updateState({ connectionStatus: 'Validating Azure credentials...' });
+      await this.validateAzureCredentials();
 
       console.log('🔑 [Azure Avatar SDK] Creating speech config...');
       this.updateState({ connectionStatus: 'Creating speech configuration...' });
@@ -213,16 +210,16 @@ export class AzureTTSAvatarSDK extends EventTarget {
         this.config.speechRegion
       );
 
-              // Set voice
-        if (this.config.voice) {
-          this.speechConfig.speechSynthesisVoiceName = this.config.voice;
-        } else {
-          this.speechConfig.speechSynthesisLanguage = 'en-US';
-        }
+      // Set voice
+      if (this.config.voice) {
+        this.speechConfig.speechSynthesisVoiceName = this.config.voice;
+      } else {
+        this.speechConfig.speechSynthesisLanguage = 'en-US';
+      }
 
-        // Add timeout properties based on Azure troubleshooting guide
-        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
-        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
+      // Add timeout properties based on Azure troubleshooting guide
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
 
       console.log('🎭 [Azure Avatar SDK] Creating avatar config...');
       this.updateState({ connectionStatus: 'Creating avatar configuration...' });

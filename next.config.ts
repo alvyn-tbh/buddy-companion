@@ -72,6 +72,48 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
+          // Add CORS headers for Azure Speech SDK
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'X-Requested-With, Content-Type, Authorization',
+          },
+        ],
+      },
+      // Add specific CORS configuration for Azure Speech SDK endpoints
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'header',
+            key: 'origin',
+            value: '(?:https://.*\\.cognitiveservices\\.azure\\.com|https://.*\\.blob\\.core\\.windows\\.net|https://aka\\.ms).*',
+          },
+        ],
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
         ],
       },
       {

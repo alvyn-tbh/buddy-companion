@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Badge } from '@/components/ui/badge';
-import { Github, ExternalLink, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Github, ExternalLink, BookOpen, Bug, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 
 // Dynamically import components with no SSR to prevent hydration mismatches
@@ -38,7 +39,21 @@ const SpeechToVideoConversation = dynamic(() => import('@/components/speech-to-v
   )
 });
 
+const SpeechToVideoDebug = dynamic(() => import('@/components/speech-to-video-debug'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96">
+      <div className="text-center">
+        <div className="h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">Loading debug panel...</p>
+      </div>
+    </div>
+  )
+});
+
 export default function SpeechToVideoDemoPage() {
+  const [showDebug, setShowDebug] = useState(false);
+  
   // Set page title and description for SEO
   useEffect(() => {
     document.title = 'Speech-to-Video Demo | AI Companion';
@@ -96,7 +111,23 @@ export default function SpeechToVideoDemoPage() {
             <ExternalLink className="h-4 w-4" />
             Azure Docs
           </Link>
+          <Button
+            onClick={() => setShowDebug(!showDebug)}
+            variant="outline"
+            className="inline-flex items-center gap-2"
+          >
+            <Bug className="h-4 w-4" />
+            Debug Panel
+            {showDebug ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
         </div>
+
+        {/* Debug Panel */}
+        {showDebug && (
+          <div className="mb-8">
+            <SpeechToVideoDebug />
+          </div>
+        )}
 
         {/* Speech-to-Video Conversation Component */}
         <SpeechToVideoConversation className="mb-8" />

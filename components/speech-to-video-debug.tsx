@@ -1,340 +1,378 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { AlertTriangle, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { AzureTTSAvatarSDK } from '@/lib/azure-tts-avatar-sdk';
+import { Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-interface DebugInfo {
-  browserSupport: {
-    speechRecognition: boolean;
-    webRTC: boolean;
-    mediaDevices: boolean;
-  };
-  azureConfig: {
-    speechKey: boolean;
-    speechRegion: string | null;
-  };
-  permissions: {
-    microphone: string;
-  };
-  connectionStatus: string;
-  errors: string[];
+interface DebugStep {
+  name: string;
+  status: 'pending' | 'running' | 'success' | 'error';
+  message?: string;
+  timestamp?: Date;
 }
 
-interface SpeechToVideoDebugProps {
-  isActive: boolean;
-  isConnecting: boolean;
-  connectionStatus: string;
-  error: string | null;
-  onRetry?: () => void;
-}
+export function SpeechToVideoDebug() {
+  const [debugSteps, setDebugSteps] = useState<DebugStep[]>([
+    { name: 'Environment Variables Check', status: 'pending' },
+    { name: 'Azure SDK Loading', status: 'pending' },
+    { name: 'Azure Credentials Validation', status: 'pending' },
+    { name: 'Avatar Instance Creation', status: 'pending' },
+    { name: 'Video Element Setup', status: 'pending' },
+    { name: 'Avatar Connection', status: 'pending' },
+    { name: 'Test Speech Synthesis', status: 'pending' }
+  ]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
 
-export function SpeechToVideoDebug({ 
-  isActive, 
-  isConnecting, 
-  connectionStatus, 
-  error,
-  onRetry 
-}: SpeechToVideoDebugProps) {
-  const [debugInfo, setDebugInfo] = useState<DebugInfo>({
-    browserSupport: {
-      speechRecognition: false,
-      webRTC: false,
-      mediaDevices: false
-    },
-    azureConfig: {
-      speechKey: false,
-      speechRegion: null
-    },
-    permissions: {
-      microphone: 'unknown'
-    },
-    connectionStatus: 'Not connected',
-    errors: []
-  });
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
 
-  const [isCheckingPermissions, setIsCheckingPermissions] = useState(false);
+  const updateStep = (stepName: string, status: DebugStep['status'], message?: string) => {
+    setDebugSteps(prev => prev.map(step => 
+      step.name === stepName 
+        ? { ...step, status, message, timestamp: new Date() }
+        : step
+    ));
+    addLog(`${stepName}: ${status}${message ? ` - ${message}` : ''}`);
+  };
 
-  useEffect(() => {
-    checkSystemRequirements();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const runDebugTest = async () => {
+    setIsRunning(true);
+    setLogs([]);
+    
+    // Reset all steps
+    setDebugSteps(prev => prev.map(step => ({ ...step, status: 'pending', message: undefined })));
 
-  useEffect(() => {
-    setDebugInfo(prev => ({
-      ...prev,
-      connectionStatus,
-      errors: error ? [error] : []
-    }));
-  }, [connectionStatus, error]);
-
-  const checkSystemRequirements = async () => {
-    const info: DebugInfo = {
-      browserSupport: {
-        speechRecognition: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window,
-        webRTC: 'RTCPeerConnection' in window,
-        mediaDevices: 'navigator' in window && 'mediaDevices' in navigator
-      },
-      azureConfig: {
+    try {
+      // Step 1: Check environment variables
+      updateStep('Environment Variables Check', 'running');
+      const envCheck = {
         speechKey: !!process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY,
         speechRegion: process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION || null
-      },
-      permissions: {
-        microphone: 'unknown'
-      },
-      connectionStatus: connectionStatus || 'Not connected',
-      errors: error ? [error] : []
+      };
+      
+      if (!envCheck.speechKey || !envCheck.speechRegion) {
+        updateStep('Environment Variables Check', 'error', 
+          `Missing: ${!envCheck.speechKey ? 'SPEECH_KEY ' : ''}${!envCheck.speechRegion ? 'SPEECH_REGION' : ''}`
+        );
+        return;
+      }
+      
+      updateStep('Environment Variables Check', 'success', 
+        `Region: ${envCheck.speechRegion}, Key: ${envCheck.speechKey ? 'Present' : 'Missing'}`
+      );
+
+      // Step 2: Load Azure SDK
+      updateStep('Azure SDK Loading', 'running');
+      
+      // Create a test script element to check SDK loading
+      const testScriptLoad = () => {
+        return new Promise<void>((resolve, reject) => {
+          if (window.SpeechSDK) {
+            resolve();
+            return;
+          }
+          
+          const script = document.createElement('script');
+          script.src = 'https://aka.ms/csspeech/jsbrowserpackageraw';
+          script.async = true;
+          
+          const timeout = setTimeout(() => {
+            document.head.removeChild(script);
+            reject(new Error('SDK load timeout'));
+          }, 10000);
+          
+          script.onload = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          
+          script.onerror = (error) => {
+            clearTimeout(timeout);
+            document.head.removeChild(script);
+            reject(error);
+          };
+          
+          document.head.appendChild(script);
+        });
+      };
+
+      try {
+        await testScriptLoad();
+        updateStep('Azure SDK Loading', 'success', 'SDK loaded successfully');
+      } catch (error) {
+        updateStep('Azure SDK Loading', 'error', `Failed to load SDK: ${error}`);
+        return;
+      }
+
+      // Step 3: Validate Azure credentials
+      updateStep('Azure Credentials Validation', 'running');
+      
+      try {
+        const response = await fetch(
+          `https://${envCheck.speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || '',
+              'Content-type': 'application/x-www-form-urlencoded',
+              'Content-Length': '0'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        updateStep('Azure Credentials Validation', 'success', 'Credentials valid');
+      } catch (error) {
+        updateStep('Azure Credentials Validation', 'error', 
+          `Invalid credentials or network error: ${error}`
+        );
+        return;
+      }
+
+      // Step 4: Create avatar instance
+      updateStep('Avatar Instance Creation', 'running');
+      
+      let avatar: AzureTTSAvatarSDK | null = null;
+      try {
+        avatar = new AzureTTSAvatarSDK({
+          speechKey: process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || '',
+          speechRegion: envCheck.speechRegion || '',
+          avatarCharacter: 'lisa',
+          avatarStyle: 'casual-sitting',
+          voice: 'en-US-JennyNeural'
+        });
+        
+        updateStep('Avatar Instance Creation', 'success', 'Avatar instance created');
+      } catch (error) {
+        updateStep('Avatar Instance Creation', 'error', `Failed to create instance: ${error}`);
+        return;
+      }
+
+      // Step 5: Setup video element
+      updateStep('Video Element Setup', 'running');
+      
+      const videoElement = document.createElement('video');
+      videoElement.style.width = '100%';
+      videoElement.style.height = '100%';
+      videoElement.autoplay = true;
+      videoElement.playsInline = true;
+      
+      const videoContainer = document.getElementById('debug-video-container');
+      if (videoContainer) {
+        videoContainer.innerHTML = '';
+        videoContainer.appendChild(videoElement);
+        updateStep('Video Element Setup', 'success', 'Video element ready');
+      } else {
+        updateStep('Video Element Setup', 'error', 'Video container not found');
+        return;
+      }
+
+      // Step 6: Connect avatar
+      updateStep('Avatar Connection', 'running');
+      
+      try {
+        await avatar.initialize(videoElement);
+        updateStep('Avatar Connection', 'success', 'Avatar connected');
+      } catch (error) {
+        updateStep('Avatar Connection', 'error', `Connection failed: ${error}`);
+        return;
+      }
+
+      // Step 7: Test speech
+      updateStep('Test Speech Synthesis', 'running');
+      
+      try {
+        await avatar.speakText('Hello! This is a test of the Azure Text to Speech Avatar system.');
+        updateStep('Test Speech Synthesis', 'success', 'Speech synthesis working');
+      } catch (error) {
+        updateStep('Test Speech Synthesis', 'error', `Speech failed: ${error}`);
+      }
+
+      // Cleanup
+      setTimeout(() => {
+        avatar?.disconnect();
+      }, 10000);
+
+    } catch (error) {
+      addLog(`Unexpected error: ${error}`);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const getStatusIcon = (status: DebugStep['status']) => {
+    switch (status) {
+      case 'pending':
+        return <AlertCircle className="h-4 w-4 text-gray-400" />;
+      case 'running':
+        return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: DebugStep['status']) => {
+    const variants: Record<DebugStep['status'], 'outline' | 'default' | 'secondary' | 'destructive'> = {
+      pending: 'outline',
+      running: 'default',
+      success: 'secondary',
+      error: 'destructive'
+    };
+    
+    return <Badge variant={variants[status]}>{status}</Badge>;
+  };
+
+  // Console log interceptor
+  useEffect(() => {
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('[Azure Avatar SDK]') || message.includes('[VideoAvatar]')) {
+        addLog(`LOG: ${message}`);
+      }
+      originalLog(...args);
     };
 
-    // Check microphone permissions
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        info.permissions.microphone = 'granted';
-        stream.getTracks().forEach(track => track.stop());
-      } catch (err) {
-        info.permissions.microphone = 'denied';
-        console.error('Microphone permission denied:', err);
+    console.error = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('[Azure Avatar SDK]') || message.includes('[VideoAvatar]')) {
+        addLog(`ERROR: ${message}`);
       }
-    }
+      originalError(...args);
+    };
 
-    setDebugInfo(info);
-  };
+    console.warn = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('[Azure Avatar SDK]') || message.includes('[VideoAvatar]')) {
+        addLog(`WARN: ${message}`);
+      }
+      originalWarn(...args);
+    };
 
-  const requestMicrophonePermission = async () => {
-    setIsCheckingPermissions(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setDebugInfo(prev => ({
-        ...prev,
-        permissions: { ...prev.permissions, microphone: 'granted' }
-      }));
-      stream.getTracks().forEach(track => track.stop());
-    } catch (err) {
-      setDebugInfo(prev => ({
-        ...prev,
-        permissions: { ...prev.permissions, microphone: 'denied' }
-      }));
-      console.error('Microphone permission denied:', err);
-    }
-    setIsCheckingPermissions(false);
-  };
-
-  const getStatusIcon = (status: boolean | string) => {
-    if (typeof status === 'boolean') {
-      return status ? (
-        <CheckCircle className="h-4 w-4 text-green-500" />
-      ) : (
-        <XCircle className="h-4 w-4 text-red-500" />
-      );
-    }
-    
-    switch (status) {
-      case 'granted':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'denied':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-    }
-  };
-
-  const getStatusBadge = () => {
-    if (isConnecting) {
-      return <Badge variant="outline" className="bg-blue-50 text-blue-700">Connecting...</Badge>;
-    }
-    if (isActive) {
-      return <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>;
-    }
-    if (error) {
-      return <Badge variant="outline" className="bg-red-50 text-red-700">Error</Badge>;
-    }
-    return <Badge variant="outline" className="bg-gray-50 text-gray-700">Inactive</Badge>;
-  };
-
-  const allRequirementsMet = debugInfo.browserSupport.speechRecognition && 
-                             debugInfo.browserSupport.webRTC && 
-                             debugInfo.browserSupport.mediaDevices &&
-                             debugInfo.azureConfig.speechKey &&
-                             debugInfo.azureConfig.speechRegion &&
-                             debugInfo.permissions.microphone === 'granted';
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+    };
+  }, []);
 
   return (
     <Card className="p-6">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold">Avatar Status</h3>
-            {getStatusBadge()}
-          </div>
-          {onRetry && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRetry}
-              disabled={isConnecting}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isConnecting ? 'animate-spin' : ''}`} />
-              Retry
-            </Button>
-          )}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Speech-to-Video Debug Panel</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Test each component of the Speech-to-Video system
+          </p>
         </div>
 
-        {/* Connection Status */}
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">Connection Status</h4>
-          <div className="flex items-center gap-2">
-            {isActive ? (
-              <CheckCircle className="h-4 w-4 text-green-500" />
+        <div className="flex justify-center">
+          <Button
+            onClick={runDebugTest}
+            disabled={isRunning}
+            size="lg"
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running Debug Test...
+              </>
             ) : (
-              <XCircle className="h-4 w-4 text-red-500" />
+              'Run Debug Test'
             )}
-            <span className="text-sm">{connectionStatus || 'Not connected'}</span>
+          </Button>
+        </div>
+
+        {/* Debug Steps */}
+        <div className="space-y-2">
+          <h3 className="font-semibold">Debug Steps:</h3>
+          {debugSteps.map((step, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                {getStatusIcon(step.status)}
+                <span className="font-medium">{step.name}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {getStatusBadge(step.status)}
+                {step.timestamp && (
+                  <span className="text-xs text-gray-500">
+                    {step.timestamp.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Video Container */}
+        <div className="space-y-2">
+          <h3 className="font-semibold">Video Output:</h3>
+          <div
+            id="debug-video-container"
+            className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+          >
+            <div className="flex items-center justify-center h-full text-gray-400">
+              Video will appear here during testing
+            </div>
           </div>
         </div>
 
-        {/* Browser Support */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">Browser Support</h4>
+        {/* Logs */}
+        <div className="space-y-2">
+          <h3 className="font-semibold">Debug Logs:</h3>
+          <div className="h-64 overflow-y-auto bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-xs">
+            {logs.length === 0 ? (
+              <div className="text-gray-500">No logs yet. Run the debug test to see logs.</div>
+            ) : (
+              logs.map((log, index) => (
+                <div key={index} className="mb-1">
+                  {log}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Step Details */}
+        {debugSteps.some(step => step.message) && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Speech Recognition</span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(debugInfo.browserSupport.speechRecognition)}
-                <span className="text-xs text-gray-500">
-                  {debugInfo.browserSupport.speechRecognition ? 'Supported' : 'Not supported'}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">WebRTC</span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(debugInfo.browserSupport.webRTC)}
-                <span className="text-xs text-gray-500">
-                  {debugInfo.browserSupport.webRTC ? 'Supported' : 'Not supported'}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Media Devices</span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(debugInfo.browserSupport.mediaDevices)}
-                <span className="text-xs text-gray-500">
-                  {debugInfo.browserSupport.mediaDevices ? 'Supported' : 'Not supported'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Azure Configuration */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">Azure Configuration</h4>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Speech Key</span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(debugInfo.azureConfig.speechKey)}
-                <span className="text-xs text-gray-500">
-                  {debugInfo.azureConfig.speechKey ? 'Configured' : 'Missing'}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Speech Region</span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(!!debugInfo.azureConfig.speechRegion)}
-                <span className="text-xs text-gray-500">
-                  {debugInfo.azureConfig.speechRegion || 'Missing'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Permissions */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">Permissions</h4>
-          <div className="flex items-center justify-between">
-            <span className="text-sm">Microphone Access</span>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(debugInfo.permissions.microphone)}
-              <span className="text-xs text-gray-500 capitalize">
-                {debugInfo.permissions.microphone}
-              </span>
-              {debugInfo.permissions.microphone === 'denied' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={requestMicrophonePermission}
-                  disabled={isCheckingPermissions}
-                >
-                  {isCheckingPermissions ? 'Checking...' : 'Request'}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Errors */}
-        {debugInfo.errors.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="font-medium text-sm text-red-700 dark:text-red-300">Errors</h4>
+            <h3 className="font-semibold">Step Details:</h3>
             <div className="space-y-2">
-              {debugInfo.errors.map((err, index) => (
-                <div key={index} className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-red-700 dark:text-red-300">{err}</span>
+              {debugSteps.filter(step => step.message).map((step, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg text-sm ${
+                    step.status === 'error' 
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' 
+                      : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                  }`}
+                >
+                  <strong>{step.name}:</strong> {step.message}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Troubleshooting */}
-        {!allRequirementsMet && (
-          <div className="space-y-3">
-            <h4 className="font-medium text-sm text-yellow-700 dark:text-yellow-300">Troubleshooting</h4>
-            <div className="space-y-2 text-sm">
-              {!debugInfo.browserSupport.speechRecognition && (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-yellow-700 dark:text-yellow-300">
-                    Speech recognition requires Chrome, Edge, or Safari browser.
-                  </span>
-                </div>
-              )}
-              {!debugInfo.azureConfig.speechKey && (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-yellow-700 dark:text-yellow-300">
-                    Set NEXT_PUBLIC_AZURE_SPEECH_KEY in your environment variables.
-                  </span>
-                </div>
-              )}
-              {!debugInfo.azureConfig.speechRegion && (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-yellow-700 dark:text-yellow-300">
-                    Set NEXT_PUBLIC_AZURE_SPEECH_REGION in your environment variables.
-                  </span>
-                </div>
-              )}
-              {debugInfo.permissions.microphone === 'denied' && (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-yellow-700 dark:text-yellow-300">
-                    Microphone access is required for speech-to-video conversations.
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
       </div>
     </Card>
   );
-} 
+}
+
+export default SpeechToVideoDebug; 
