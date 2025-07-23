@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { VideoAvatar } from './video-avatar';
 import { AzureTTSAvatarSDK, AvatarConfig } from '@/lib/azure-tts-avatar-sdk';
 import { toast } from 'sonner';
@@ -46,7 +45,7 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
   const [isConversationActive, setIsConversationActive] = useState(false);
   
   // Refs
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
   const conversationActiveRef = useRef(false);
@@ -88,10 +87,10 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
     try {
       recognitionRef.current.start();
       console.log('🎤 Started listening');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to start listening:', error);
       // Try again if already started
-      if (error.message?.includes('already started')) {
+      if (error instanceof Error && error.message?.includes('already started')) {
         recognitionRef.current.stop();
         setTimeout(() => {
           if (conversationActiveRef.current) {
@@ -223,9 +222,52 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
     }
   }, [currentAvatar, avatarState.isReady, messages, stopListening, startListening]);
 
+  // Enhanced error handling based on Azure Speech Service documentation
+  const handleSpeechRecognitionError = useCallback((errorType: string): boolean => {
+    switch (errorType) {
+      case 'aborted':
+      case 'not-allowed':
+        // User explicitly stopped or denied permission - don't retry
+        toast.error('Speech recognition access denied. Please allow microphone access.');
+        return false;
+      case 'audio-capture':
+        toast.error('Audio capture failed. Check your microphone.');
+        return false;
+      case 'network':
+        toast.warning('Network error. Retrying...');
+        return true;
+      case 'service-not-allowed':
+        toast.error('Speech service not available.');
+        return false;
+      case 'bad-grammar':
+      case 'language-not-supported':
+        toast.error('Language not supported for speech recognition.');
+        return false;
+      case 'no-speech':
+        // Common issue - just retry silently
+        console.log('No speech detected, continuing...');
+        return true;
+      default:
+        console.warn(`Unknown speech recognition error: ${errorType}`);
+        return true; // Retry unknown errors
+    }
+  }, []);
+
+  const getRetryDelay = useCallback((errorType: string): number => {
+    switch (errorType) {
+      case 'network':
+        return 3000; // 3 seconds for network errors
+      case 'no-speech':
+        return 500; // Quick retry for no speech
+      default:
+        return 1000; // Default 1 second
+    }
+  }, []);
+
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
@@ -238,7 +280,7 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
         setIsListening(true);
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
         let interimTranscript = '';
 
@@ -262,13 +304,17 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
         }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('❌ Speech recognition error:', event.error);
         setIsListening(false);
         
-        // Restart recognition if conversation is still active
-        if (conversationActiveRef.current && event.error !== 'aborted') {
-          setTimeout(() => startListening(), 1000);
+        // Enhanced error handling based on Azure Speech Service troubleshooting guide
+        const shouldRetry = handleSpeechRecognitionError(event.error);
+        
+        // Restart recognition if conversation is still active and error is recoverable
+        if (conversationActiveRef.current && shouldRetry) {
+          const retryDelay = getRetryDelay(event.error);
+          setTimeout(() => startListening(), retryDelay);
         }
       };
 
@@ -290,7 +336,7 @@ export function SpeechToVideoConversation({ className = '' }: SpeechToVideoConve
         recognitionRef.current.abort();
       }
     };
-  }, [processSpeech, startListening]);
+  }, [processSpeech, startListening, handleSpeechRecognitionError, getRetryDelay]);
 
   // Start conversation
   const startConversation = useCallback(() => {
