@@ -1,252 +1,162 @@
-# Azure Text-to-Speech Avatar Setup
+# Azure Text-to-Speech Avatar Setup Guide
 
-This document explains how to set up Azure Text-to-Speech Avatar functionality for speech-to-video responses in the AI Companion application.
+This guide will help you set up Azure Text-to-Speech Avatar service for the speech-to-video conversation feature.
 
 ## Prerequisites
 
-1. **Azure Subscription**: You need an active Azure subscription
-2. **Azure Speech Service**: Create a Speech service resource in Azure Portal
+- Azure account with active subscription
+- Azure Speech Service resource
+- Node.js 18+ installed
+- Modern web browser (Chrome, Edge, or Safari recommended)
 
-## Azure Speech Service Setup
+## Step 1: Create Azure Speech Service Resource
 
-### 1. Create Speech Service Resource
-
-1. Go to [Azure Portal](https://portal.azure.com)
+1. Sign in to the [Azure Portal](https://portal.azure.com)
 2. Click "Create a resource"
-3. Search for "Speech" and select "Speech"
-4. Configure the resource:
-   - **Subscription**: Your Azure subscription
-   - **Resource Group**: Create new or use existing
-   - **Region**: Choose a region (e.g., East US, West US 2)
-   - **Name**: Your speech service name
-   - **Pricing Tier**: Choose based on your needs (F0 for free tier)
+3. Search for "Speech" and select "Speech" by Microsoft
+4. Click "Create"
+5. Fill in the required details:
+   - **Subscription**: Select your Azure subscription
+   - **Resource group**: Create new or select existing
+   - **Region**: Choose a region that supports Text-to-Speech Avatar (recommended: `westus2`, `eastus`, `westeurope`)
+   - **Name**: Give your resource a unique name
+   - **Pricing tier**: Select Standard S0 (required for Avatar feature)
+6. Click "Review + create" and then "Create"
 
-### 2. Get Credentials
+## Step 2: Get Your API Keys
 
-After creating the resource:
-1. Go to your Speech service resource
-2. Navigate to "Keys and Endpoint"
-3. Copy:
-   - **Key 1** (Speech Key)
-   - **Region** (e.g., eastus, westus2)
+1. Once the resource is created, go to your Speech resource
+2. In the left menu, click on "Keys and Endpoint"
+3. Copy **KEY 1** or **KEY 2** (either will work)
+4. Note down the **Location/Region** (e.g., `westus2`)
 
-## Environment Variables
+## Step 3: Configure Environment Variables
 
-Add the following environment variables to your `.env.local` file:
+1. In your project root, create or update the `.env.local` file:
 
-```env
-# Azure Speech Service Credentials
-NEXT_PUBLIC_AZURE_SPEECH_KEY=your_azure_speech_key_here
-NEXT_PUBLIC_AZURE_SPEECH_REGION=your_azure_region_here
+```bash
+# Azure Speech Service
+NEXT_PUBLIC_AZURE_SPEECH_KEY=your_speech_key_here
+NEXT_PUBLIC_AZURE_SPEECH_REGION=your_region_here
+
+# OpenAI API (for GPT processing)
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### Example:
-```env
-NEXT_PUBLIC_AZURE_SPEECH_KEY=1234567890abcdef1234567890abcdef
-NEXT_PUBLIC_AZURE_SPEECH_REGION=eastus
-```
+2. Replace the placeholders:
+   - `your_speech_key_here`: Your Azure Speech Service key from Step 2
+   - `your_region_here`: Your Azure region (e.g., `westus2`)
+   - `your_openai_api_key_here`: Your OpenAI API key
 
-## Available Avatar Configuration
+## Step 4: Verify Browser Compatibility
+
+The speech-to-video feature requires:
+- **Microphone access** for speech recognition
+- **WebRTC support** for real-time communication
+- **Modern browser** with Web Speech API support
+
+Supported browsers:
+- Google Chrome 90+
+- Microsoft Edge 90+
+- Safari 14.1+
+
+## Step 5: Test Your Setup
+
+1. Start your development server:
+   ```bash
+   npm run dev
+   ```
+
+2. Navigate to `/speech-to-video-demo`
+
+3. Check the setup status indicator at the top of the page
+
+4. If everything is configured correctly, you should see:
+   - ✅ Azure Speech Service configured
+   - ✅ OpenAI API configured
+   - ✅ Browser supports speech recognition
+
+## Available Avatar Options
 
 ### Characters
-- `lisa` - Female avatar (default)
-- `anna` - Female avatar
-- `james` - Male avatar
-- `michelle` - Female avatar
-- `william` - Male avatar
+- `lisa` (default)
+- `jenny`
+- `jason`
+- `aria`
+- `guy`
+- `emma`
 
 ### Styles
-- `casual-sitting` - Casual seated pose (default)
-- `business-sitting` - Professional seated pose
-- `friendly-standing` - Friendly standing pose
-- `newscast-sitting` - News anchor style
-- `technical-standing` - Technical presentation style
+- `casual-sitting` (default)
+- `formal-standing`
+- `technical-sitting`
+- `graceful-standing`
 
 ### Voices
-- `en-US-JennyNeural` - Jenny (US English) - default
-- `en-US-GuyNeural` - Guy (US English)
-- `en-US-AriaNeural` - Aria (US English)
-- `en-US-DavisNeural` - Davis (US English)
-- And many more...
-
-## How to Use
-
-### Basic Usage
-1. **Enable Speech-to-Video Mode**: Click the video icon in the chat textarea
-2. **Speak Your Message**: Use voice input or type your message
-3. **Get Avatar Response**: The AI will respond with both text and avatar video
-
-### Advanced Usage with State Management
-
-#### Using the Custom Hook
-```tsx
-import { useSpeechToVideo } from '@/lib/hooks/use-speech-to-video';
-
-function MyComponent() {
-  const {
-    state,
-    startSpeechToVideo,
-    stopSpeechToVideo,
-    speakText,
-    isAvailable
-  } = useSpeechToVideo();
-
-  const handleStart = async () => {
-    try {
-      await startSpeechToVideo({
-        avatarCharacter: 'lisa',
-        avatarStyle: 'business-sitting',
-        voice: 'en-US-JennyNeural'
-      });
-    } catch (error) {
-      console.error('Failed to start:', error);
-    }
-  };
-
-  return (
-    <div>
-      <p>Status: {state.connectionStatus}</p>
-      <p>Speaking: {state.isSpeaking ? 'Yes' : 'No'}</p>
-      <button onClick={handleStart} disabled={!isAvailable}>
-        Start Avatar
-      </button>
-    </div>
-  );
-}
-```
-
-#### Using the Context Provider
-```tsx
-import { SpeechToVideoProvider, useSpeechToVideoContext } from '@/lib/context/speech-to-video-context';
-
-function App() {
-  return (
-    <SpeechToVideoProvider>
-      <MyAvatarComponent />
-    </SpeechToVideoProvider>
-  );
-}
-
-function MyAvatarComponent() {
-  const { state, speakText } = useSpeechToVideoContext();
-  
-  const handleSpeak = async () => {
-    if (state.isReady) {
-      await speakText("Hello, I'm your AI avatar!");
-    }
-  };
-
-  return (
-    <button onClick={handleSpeak} disabled={!state.isReady}>
-      {state.isSpeaking ? 'Speaking...' : 'Say Hello'}
-    </button>
-  );
-}
-```
-
-## Features
-
-- **Real-time Avatar Generation**: Responses are generated in real-time
-- **Lip Sync**: Avatar lip movements are synchronized with speech
-- **Multiple Characters**: Choose from different avatar characters
-- **Voice Variety**: Multiple neural voices available
-- **Quality Control**: High-quality video output at 2 Mbps
-- **State Management**: Comprehensive state tracking and management
-- **Context Provider**: Global state management across components
-- **Custom Hooks**: Reusable hooks for avatar functionality
-
-## State Management
-
-### Speech-to-Video State Interface
-```typescript
-interface SpeechToVideoState {
-  isActive: boolean;        // Whether avatar mode is active
-  isConnecting: boolean;    // Whether currently connecting
-  connectionStatus: string; // Current connection status
-  isSpeaking: boolean;      // Whether avatar is currently speaking
-  error: string | null;     // Any error messages
-  isReady: boolean;         // Whether avatar is ready to speak
-}
-```
-
-### Available Status Values
-- `''` - Inactive/Disconnected
-- `'Connected'` - Avatar ready to speak
-- `'Speaking'` - Avatar currently speaking
-- `'Error'` - Connection or synthesis error
-- `'Disconnected'` - Avatar disconnected
-
-### State Transitions
-1. **Inactive** → **Connecting** → **Connected** → **Ready**
-2. **Ready** → **Speaking** → **Ready** (during speech)
-3. **Any State** → **Error** (on failures)
-4. **Any State** → **Disconnected** (on manual stop)
+- `en-US-JennyNeural` (default)
+- `en-US-AriaNeural`
+- `en-US-GuyNeural`
+- `en-US-JasonNeural`
+- `en-US-EmmaNeural`
 
 ## Troubleshooting
 
-### Common Issues
+### "Azure Speech Service not configured"
+- Double-check your environment variables
+- Ensure you're using the correct key and region
+- Restart your development server after updating `.env.local`
 
-1. **"Azure Speech credentials not configured"**
-   - Ensure environment variables are set correctly
-   - Restart the development server after adding variables
+### "Speech recognition not supported"
+- Use a supported browser (Chrome, Edge, or Safari)
+- Ensure your browser has microphone permissions
+- Check that you're using HTTPS (or localhost for development)
 
-2. **"Failed to load Azure Speech SDK"**
-   - Check internet connection
-   - Ensure the CDN link is accessible
+### "Avatar initialization timeout"
+- Check your internet connection
+- Verify your Azure region supports Text-to-Speech Avatar
+- Ensure your Speech Service resource is Standard S0 tier
 
-3. **Avatar initialization fails**
-   - Verify your Azure Speech service is active
-   - Check if you have available quota
-   - Ensure the region matches your Speech service region
-
-4. **Video playback issues**
-   - Ensure your browser supports HTML5 video
-   - Check if WebRTC is enabled in your browser
-   - Try refreshing the page
-
-### Debugging
-
-Enable debug logging by adding to your environment:
-```env
-NEXT_PUBLIC_DEBUG_AVATAR=true
-```
-
-## Browser Compatibility
-
-### Supported Browsers
-- Chrome 80+
-- Firefox 75+
-- Safari 13+
-- Edge 80+
-
-### Required Features
-- WebRTC support
-- HTML5 video support
-- JavaScript enabled
+### "Microphone access denied"
+- Click the microphone icon in your browser's address bar
+- Grant permission for the site to access your microphone
+- Refresh the page after granting permission
 
 ## Cost Considerations
 
 Azure Text-to-Speech Avatar pricing:
-- **Free Tier**: 500,000 characters per month
-- **Standard**: $15 per 1M characters for neural voices
-- **Avatar Enhancement**: Additional cost for video generation
+- Standard tier: ~$15 per hour of synthesized video
+- Neural voices: ~$16 per 1 million characters
+- Speech recognition: ~$1 per hour
 
-Monitor usage in Azure Portal under your Speech service resource.
+Monitor your usage in the Azure Portal to avoid unexpected charges.
 
-## Security Notes
+## Security Best Practices
 
-1. **Environment Variables**: Keep your Speech keys secure
-2. **Client-side Keys**: Using `NEXT_PUBLIC_` exposes keys to client
-3. **Production**: Consider server-side proxy for production apps
-4. **Rotation**: Regularly rotate your Azure keys
+1. **Never commit API keys to version control**
+   - Use `.env.local` for local development
+   - Use environment variables in production
+
+2. **Implement rate limiting**
+   - Limit API calls per user
+   - Add authentication for production use
+
+3. **Use CORS properly**
+   - Configure allowed origins
+   - Restrict API access to your domain
+
+## Additional Resources
+
+- [Azure Text-to-Speech Avatar Documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/what-is-text-to-speech-avatar)
+- [Real-time Avatar Synthesis](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/real-time-synthesis-avatar)
+- [Custom Avatar Creation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/custom-avatar-create)
+- [Avatar Gestures with SSML](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/avatar-gestures-with-ssml)
 
 ## Support
 
-For Azure Speech service issues:
-- [Azure Speech Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/)
-- [Azure Support Portal](https://portal.azure.com/#blade/Microsoft_Azure_Support/HelpAndSupportBlade)
-
-For application issues:
-- Check browser console for errors
-- Verify environment variable configuration
-- Test with different browsers 
+If you encounter issues not covered in this guide:
+1. Check the browser console for detailed error messages
+2. Review the Azure Speech Service logs in the Azure Portal
+3. Open an issue on the project repository with:
+   - Error messages
+   - Browser and version
+   - Steps to reproduce 

@@ -66,6 +66,32 @@ export class AzureTTSAvatarSDK extends EventTarget {
     this.emit('stateChange', this.state);
   }
 
+  private async validateAzureCredentials(): Promise<void> {
+    // Based on Azure troubleshooting guide: validate credentials
+    try {
+      const response = await fetch(`https://${this.config.speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': this.config.speechKey,
+          'Content-type': 'application/x-www-form-urlencoded',
+          'Content-Length': '0'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Invalid Azure Speech credentials - check your subscription key and region');
+        }
+        throw new Error(`Azure Speech Service error: ${response.status} ${response.statusText}`);
+      }
+
+      console.log('✅ [Azure Avatar SDK] Credentials validated successfully');
+    } catch (error) {
+      console.error('❌ [Azure Avatar SDK] Credential validation failed:', error);
+      throw new Error(`Azure credential validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   private async loadSpeechSDK(): Promise<void> {
     if (this.isSDKLoaded && window.SpeechSDK) {
       return;
@@ -165,10 +191,18 @@ export class AzureTTSAvatarSDK extends EventTarget {
       // Load Speech SDK
       await this.loadSpeechSDK();
 
-      // Validate configuration
-      if (!this.config.speechKey || !this.config.speechRegion) {
-        throw new Error('Missing Azure Speech credentials');
-      }
+              // Enhanced credential validation based on Azure troubleshooting guide
+        if (!this.config.speechKey || this.config.speechKey.length < 32) {
+          throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
+        }
+
+        if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
+          throw new Error('Invalid Azure Speech Region format');
+        }
+
+        // Validate credentials with Azure service
+        this.updateState({ connectionStatus: 'Validating Azure credentials...' });
+        await this.validateAzureCredentials();
 
       console.log('🔑 [Azure Avatar SDK] Creating speech config...');
       this.updateState({ connectionStatus: 'Creating speech configuration...' });
@@ -179,12 +213,16 @@ export class AzureTTSAvatarSDK extends EventTarget {
         this.config.speechRegion
       );
 
-      // Set voice
-      if (this.config.voice) {
-        this.speechConfig.speechSynthesisVoiceName = this.config.voice;
-      } else {
-        this.speechConfig.speechSynthesisLanguage = 'en-US';
-      }
+              // Set voice
+        if (this.config.voice) {
+          this.speechConfig.speechSynthesisVoiceName = this.config.voice;
+        } else {
+          this.speechConfig.speechSynthesisLanguage = 'en-US';
+        }
+
+        // Add timeout properties based on Azure troubleshooting guide
+        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
+        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
 
       console.log('🎭 [Azure Avatar SDK] Creating avatar config...');
       this.updateState({ connectionStatus: 'Creating avatar configuration...' });

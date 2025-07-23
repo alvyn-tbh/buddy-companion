@@ -20,6 +20,9 @@ interface VideoAvatarProps {
   onAvatarReady?: (avatar: AzureTTSAvatarSDK) => void;
   onAvatarError?: (error: Error) => void;
   onStateChange?: (state: AvatarState) => void;
+  onSpeakingComplete?: () => void;
+  autoStart?: boolean;
+  hideControls?: boolean;
   className?: string;
 }
 
@@ -28,6 +31,9 @@ export function VideoAvatar({
   onAvatarReady, 
   onAvatarError, 
   onStateChange,
+  onSpeakingComplete,
+  autoStart = true,
+  hideControls = false,
   className = ''
 }: VideoAvatarProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -71,13 +77,15 @@ export function VideoAvatar({
         onAvatarReady?.(avatar);
         toast.success('Avatar connected successfully!');
         
-        // Automatically speak the intro message
-        try {
-          const { corporate } = await import('@/lib/intro-prompt');
-          console.log('🎤 [VideoAvatar] Speaking intro message...');
-          await avatar.speakText(corporate);
-        } catch (error) {
-          console.error('❌ [VideoAvatar] Failed to speak intro message:', error);
+        // Only speak intro if controls are hidden (embedded mode)
+        if (hideControls) {
+          try {
+            const { corporate } = await import('@/lib/intro-prompt');
+            console.log('🎤 [VideoAvatar] Speaking intro message...');
+            await avatar.speakText(corporate);
+          } catch (error) {
+            console.error('❌ [VideoAvatar] Failed to speak intro message:', error);
+          }
         }
       });
 
@@ -93,6 +101,7 @@ export function VideoAvatar({
 
       avatar.on('synthesisCompleted', () => {
         console.log('✅ [VideoAvatar] Finished speaking');
+        onSpeakingComplete?.();
       });
 
       // Initialize avatar
@@ -110,7 +119,7 @@ export function VideoAvatar({
       onAvatarError?.(new Error(errorMessage));
       toast.error(`Failed to start avatar: ${errorMessage}`);
     }
-  }, [config, onAvatarReady, onAvatarError, onStateChange, avatarState.isConnecting]);
+  }, [config, onAvatarReady, onAvatarError, onStateChange, onSpeakingComplete, avatarState.isConnecting, hideControls]);
 
   const stopAvatar = () => {
     if (avatarRef.current) {
@@ -163,36 +172,45 @@ export function VideoAvatar({
   };
 
   useEffect(() => {
-    // Auto-start avatar when component mounts
-    const timer = setTimeout(() => {
-      startAvatar();
-    }, 1000); // Small delay to ensure everything is ready
+    // Auto-start avatar when component mounts if enabled
+    if (autoStart) {
+      const timer = setTimeout(() => {
+        startAvatar();
+      }, 1000); // Small delay to ensure everything is ready
 
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [autoStart, startAvatar]);
+
+  useEffect(() => {
+    // Cleanup on unmount
     return () => {
-      clearTimeout(timer);
-      // Cleanup on unmount
       if (avatarRef.current) {
         avatarRef.current.disconnect();
       }
     };
-  }, [startAvatar]);
+  }, []);
 
   return (
     <Card className={`p-6 ${className}`}>
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {getStatusIcon()}
-            <div>
-              <h3 className="font-semibold">AI Avatar</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {avatarState.connectionStatus}
-              </p>
+        {!hideControls && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {getStatusIcon()}
+              <div>
+                <h3 className="font-semibold">AI Avatar</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {avatarState.connectionStatus}
+                </p>
+              </div>
             </div>
+            {getStatusBadge()}
           </div>
-          {getStatusBadge()}
-        </div>
+        )}
 
         {/* Video Container */}
         <div className="relative">
@@ -256,62 +274,66 @@ export function VideoAvatar({
         )}
 
         {/* Controls */}
-        <div className="flex gap-2">
-          {!avatarState.isConnected ? (
-            <Button
-              onClick={startAvatar}
-              disabled={avatarState.isConnecting}
-              className="flex-1"
-            >
-              {avatarState.isConnecting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        {!hideControls && (
+          <>
+            <div className="flex gap-2">
+              {!avatarState.isConnected ? (
+                <Button
+                  onClick={startAvatar}
+                  disabled={avatarState.isConnecting}
+                  className="flex-1"
+                >
+                  {avatarState.isConnecting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  {avatarState.isConnecting ? 'Connecting...' : 'Start Avatar'}
+                </Button>
               ) : (
-                <Play className="h-4 w-4 mr-2" />
+                <>
+                  <Button
+                    onClick={testSpeech}
+                    disabled={avatarState.isSpeaking}
+                    variant="outline"
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Test Speech
+                  </Button>
+                  <Button
+                    onClick={stopAvatar}
+                    variant="outline"
+                  >
+                    <Square className="h-4 w-4 mr-2" />
+                    Stop
+                  </Button>
+                </>
               )}
-              {avatarState.isConnecting ? 'Connecting...' : 'Start Avatar'}
-            </Button>
-          ) : (
-            <>
-              <Button
-                onClick={testSpeech}
-                disabled={avatarState.isSpeaking}
-                variant="outline"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Test Speech
-              </Button>
-              <Button
-                onClick={stopAvatar}
-                variant="outline"
-              >
-                <Square className="h-4 w-4 mr-2" />
-                Stop
-              </Button>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Test Text Input */}
-        {avatarState.isConnected && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Test Text:</label>
-            <textarea
-              value={testText}
-              onChange={(e) => setTestText(e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800"
-              rows={2}
-              placeholder="Enter text for the avatar to speak..."
-            />
-          </div>
+            {/* Test Text Input */}
+            {avatarState.isConnected && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Test Text:</label>
+                <textarea
+                  value={testText}
+                  onChange={(e) => setTestText(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800"
+                  rows={2}
+                  placeholder="Enter text for the avatar to speak..."
+                />
+              </div>
+            )}
+
+            {/* Avatar Info */}
+            <div className="text-xs text-gray-500 space-y-1">
+              <div>Character: {config.avatarCharacter || 'lisa'}</div>
+              <div>Style: {config.avatarStyle || 'casual-sitting'}</div>
+              <div>Voice: {config.voice || 'en-US-JennyNeural'}</div>
+              <div>Region: {config.speechRegion}</div>
+            </div>
+          </>
         )}
-
-        {/* Avatar Info */}
-        <div className="text-xs text-gray-500 space-y-1">
-          <div>Character: {config.avatarCharacter || 'lisa'}</div>
-          <div>Style: {config.avatarStyle || 'casual-sitting'}</div>
-          <div>Voice: {config.voice || 'en-US-JennyNeural'}</div>
-          <div>Region: {config.speechRegion}</div>
-        </div>
       </div>
     </Card>
   );

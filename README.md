@@ -18,6 +18,7 @@
 ## Features
 
 - **🎤 Real-time Speech-to-Speech Communication** - WebRTC-powered voice mode for natural conversations
+- **🎬 Speech-to-Video Avatar** - Azure Text-to-Speech Avatar integration for lifelike video responses
 - **🤖 Advanced AI Integration** - Powered by OpenAI GPT models with streaming responses
 - **🔊 High-Quality TTS** - OpenAI TTS with multiple voices and quality options
 - **📝 Text Chat Interface** - Traditional chat with markdown support and streaming responses
@@ -48,6 +49,38 @@ Experience natural voice conversations with the AI assistant using our advanced 
 ### TTS Quality Levels
 - **Standard (tts-1)** - Faster, lower cost
 - **Premium (tts-1-hd)** - Higher quality, enhanced fidelity
+
+## Speech-to-Video Avatar
+
+### Azure Text-to-Speech Avatar Integration
+Transform your AI conversations with lifelike video avatars:
+
+- **🎭 Realistic Avatars** - Multiple characters with natural expressions and lip-sync
+- **🔄 Continuous Conversation** - Automatic speech recognition and response loop
+- **🎤 Voice Input** - Speak naturally and get video responses
+- **🧠 AI Processing** - GPT-4 powered responses with context awareness
+- **⚡ Real-time Synthesis** - Fast avatar video generation
+- **🎨 Customizable** - Choose from different avatars, styles, and voices
+
+### Available Avatars
+- **lisa** - Professional female avatar (default)
+- **jenny** - Friendly female avatar
+- **jason** - Business male avatar
+- **aria** - Energetic female avatar
+- **guy** - Casual male avatar
+- **emma** - Warm female avatar
+
+### Setup Speech-to-Video
+1. Create an Azure Speech Service resource (Standard S0 tier)
+2. Get your API key and region from Azure Portal
+3. Add to your `.env.local`:
+   ```
+   NEXT_PUBLIC_AZURE_SPEECH_KEY=your_key_here
+   NEXT_PUBLIC_AZURE_SPEECH_REGION=your_region_here
+   ```
+4. Navigate to `/speech-to-video-demo` to try it out
+
+For detailed setup instructions, see [Azure TTS Avatar Setup Guide](docs/AZURE_TTS_AVATAR_SETUP.md)
 
 ## Deploy Your Own
 
