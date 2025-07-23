@@ -1,10 +1,11 @@
 import { Button } from "./ui/button";
 import { Textarea as TextareaComponent } from "./ui/textarea";
-import { SendHorizontal, StopCircle, Mic, MicOff, Volume2, VolumeX, Radio, Square } from "lucide-react";
+import { SendHorizontal, StopCircle, Mic, MicOff, Radio, Video } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { RealtimeWebRTC } from "../lib/realtime-webrtc";
 import { VoiceActivityIndicator, MiniVoiceIndicator } from "./voice-activity-indicator";
+import { SpeechToVideoService } from "../lib/speech-to-video-service";
 
 interface InputProps {
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } }) => void;
@@ -12,20 +13,25 @@ interface InputProps {
   isLoading: boolean;
   stop: () => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  isAudioEnabled: boolean;
-  onAudioToggle: (enabled: boolean) => void;
   voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  onSpeechToVideoStateChange?: (state: {
+    isActive: boolean;
+    isConnecting: boolean;
+    connectionStatus: string;
+    isSpeaking: boolean;
+    error: string | null;
+    isReady: boolean;
+  }) => void; // Callback for state changes
 }
 
 export function Textarea({ 
-  handleInputChange, 
-  input, 
-  isLoading, 
-  stop, 
-  handleSubmit, 
-  isAudioEnabled, 
-  onAudioToggle,
-  voice = 'alloy'
+  handleInputChange,
+  input,
+  isLoading,
+  stop,
+  handleSubmit,
+  voice = 'alloy',
+  onSpeechToVideoStateChange
 }: InputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -38,6 +44,11 @@ export function Textarea({
   const [isSpeaking, setIsSpeaking] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [noiseFloor, setNoiseFloor] = useState<number>(-50);
+  const [isSpeechToVideoActive, setIsSpeechToVideoActive] = useState(false);
+  const [isVideoConnecting, setIsVideoConnecting] = useState(false);
+  const [videoConnectionStatus, setVideoConnectionStatus] = useState<string>('');
+  const [avatarSpeaking, setAvatarSpeaking] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -45,6 +56,8 @@ export function Textarea({
   const isProcessingRef = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const realtimeRef = useRef<RealtimeWebRTC | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const azureAvatarRef = useRef<any | null>(null);
   const maxRecordingTime = 300000; // 5 minutes max recording time
   const silenceThreshold = 5000; // 5 seconds of silence
 
@@ -141,6 +154,172 @@ export function Textarea({
       }
     }
   }, [isVoiceModeActive, voice]);
+
+  const toggleSpeechToVideo = useCallback(async () => {
+    if (isSpeechToVideoActive) {
+      // Stop speech-to-video mode
+      if (azureAvatarRef.current) {
+        azureAvatarRef.current.disconnect();
+        azureAvatarRef.current = null;
+      }
+      setIsSpeechToVideoActive(false);
+      setIsVideoConnecting(false);
+      setVideoConnectionStatus('');
+      setAvatarSpeaking(false);
+      setAvatarError(null);
+      toast.info("Speech-to-video conversation stopped");
+    } else {
+      // Start speech-to-video mode with corporate integration
+      try {
+        setIsVideoConnecting(true);
+        setVideoConnectionStatus('Initializing...');
+        
+        // Get Azure credentials
+        const speechKey = process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY;
+        const speechRegion = process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION;
+
+        console.log('🔑 Checking Azure credentials...');
+        console.log('Speech Key available:', !!speechKey);
+        console.log('Speech Region:', speechRegion);
+
+        if (!speechKey || !speechRegion) {
+          const errorMsg = `Azure Speech credentials not configured. Missing: ${!speechKey ? 'SPEECH_KEY ' : ''}${!speechRegion ? 'SPEECH_REGION' : ''}`;
+          console.error('❌', errorMsg);
+          
+          // Show helpful setup guide
+          toast.error(
+            <div className="text-left">
+              <div className="font-semibold mb-2">🔧 Setup Required</div>
+              <div className="text-sm space-y-1">
+                <p>Azure Speech Service credentials are missing.</p>
+                <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-1 rounded">
+                  Missing: {!speechKey ? 'SPEECH_KEY ' : ''}{!speechRegion ? 'SPEECH_REGION' : ''}
+                </p>
+                <p className="text-blue-600 dark:text-blue-400">
+                  📖 See <strong>docs/AZURE_SETUP_GUIDE.md</strong> for step-by-step setup
+                </p>
+              </div>
+            </div>, 
+            { 
+              duration: 8000,
+              style: { maxWidth: '400px' }
+            }
+          );
+          
+          throw new Error(errorMsg);
+        }
+
+        // Create speech-to-video service instance
+
+        // Create a video element for the avatar
+        const videoElement = document.createElement('video');
+        videoElement.className = 'speech-to-video-avatar';
+        videoElement.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          width: 300px;
+          height: 225px;
+          border-radius: 12px;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+          z-index: 1000;
+          background: #000;
+        `;
+        document.body.appendChild(videoElement);
+
+        // Initialize speech-to-video service with corporate integration
+        const speechToVideoService = new SpeechToVideoService({
+          speechKey,
+          speechRegion,
+          avatarCharacter: 'lisa',
+          avatarStyle: 'casual-sitting',
+          voice: 'en-US-JennyNeural',
+          corporateApiUrl: '/api/corporate'
+        });
+
+        // Set up event listeners
+        speechToVideoService.addEventListener('ready', () => {
+          setIsSpeechToVideoActive(true);
+          setIsVideoConnecting(false);
+          setVideoConnectionStatus('Ready - Start speaking!');
+          setAvatarError(null);
+          toast.success("🎬 Speech-to-video conversation started! Start speaking now.");
+          
+          // Start listening immediately
+          speechToVideoService.startListening();
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        speechToVideoService.addEventListener('stateChange', (event: any) => {
+          const state = event.detail;
+          setVideoConnectionStatus(state.connectionStatus);
+          setAvatarSpeaking(state.isSpeaking);
+          
+          if (state.transcript) {
+            // Show the user's speech as input
+            handleInputChange({ target: { value: state.transcript } });
+          }
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        speechToVideoService.addEventListener('error', (event: any) => {
+          const error = event.detail;
+          console.error('Speech-to-video error:', error);
+          setAvatarError(error);
+          setVideoConnectionStatus('Error');
+          setIsVideoConnecting(false);
+          toast.error(`Speech-to-video error: ${error}`);
+        });
+
+        speechToVideoService.addEventListener('disconnected', () => {
+          setIsSpeechToVideoActive(false);
+          setIsVideoConnecting(false);
+          setVideoConnectionStatus('Disconnected');
+          setAvatarSpeaking(false);
+          setAvatarError(null);
+          
+          // Remove video element
+          const existingVideo = document.querySelector('.speech-to-video-avatar');
+          if (existingVideo) {
+            existingVideo.remove();
+          }
+        });
+
+        // Initialize the service
+        await speechToVideoService.initialize(videoElement);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        azureAvatarRef.current = speechToVideoService as any;
+        
+      } catch (error) {
+        console.error('Error starting speech-to-video mode:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Error starting speech-to-video: ${errorMessage}`);
+        setIsVideoConnecting(false);
+        setVideoConnectionStatus('');
+      }
+    }
+  }, [isSpeechToVideoActive, handleInputChange]);
+
+
+
+  // Get current speech-to-video state
+  const getSpeechToVideoState = useCallback(() => {
+    return {
+      isActive: isSpeechToVideoActive,
+      isConnecting: isVideoConnecting,
+      connectionStatus: videoConnectionStatus,
+      isSpeaking: avatarSpeaking,
+      error: avatarError,
+      isReady: azureAvatarRef.current?.isReady() || false
+    };
+  }, [isSpeechToVideoActive, isVideoConnecting, videoConnectionStatus, avatarSpeaking, avatarError]);
+
+  // Notify parent of speech-to-video state changes
+  useEffect(() => {
+    if (onSpeechToVideoStateChange) {
+      onSpeechToVideoStateChange(getSpeechToVideoState());
+    }
+  }, [onSpeechToVideoStateChange, getSpeechToVideoState]);
 
   // Cleanup function to prevent memory leaks
   const cleanupAudioResources = useCallback(() => {
@@ -295,11 +474,6 @@ export function Textarea({
     }
   }, [isRecording, handleInputChange, silenceThreshold, transcribeAudioWithOpenAI]);
 
-  const toggleAudio = useCallback(() => {
-    onAudioToggle(!isAudioEnabled);
-    toast.info(!isAudioEnabled ? "Audio enabled" : "Audio disabled");
-  }, [isAudioEnabled, onAudioToggle]);
-
   // Check for maximum recording time
   useEffect(() => {
     if (recordingStartTime && isRecording) {
@@ -324,6 +498,9 @@ export function Textarea({
       }
       if (realtimeRef.current) {
         realtimeRef.current.disconnect();
+      }
+      if (azureAvatarRef.current) {
+        azureAvatarRef.current.disconnect();
       }
     };
   }, [cleanupAudioResources]);
@@ -351,7 +528,7 @@ export function Textarea({
         }}
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        {/* Voice Mode Button */}
+        {/* Voice Mode Button (Radio Icon for Speech-to-Speech) */}
         <div className="relative">
           <Button
             variant={isVoiceModeActive ? "default" : "ghost"}
@@ -359,10 +536,10 @@ export function Textarea({
             className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
             onClick={toggleVoiceMode}
             disabled={isLoading || isRecording || isTranscribing || isConnecting}
-            title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
+            title={isVoiceModeActive ? "Stop speech-to-speech mode" : "Start speech-to-speech mode"}
           >
             {isVoiceModeActive ? (
-              <Square className="h-5 w-5 text-white" />
+              <Radio className="h-5 w-5 text-white animate-pulse" />
             ) : isConnecting ? (
               <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             ) : (
@@ -378,20 +555,28 @@ export function Textarea({
           )}
         </div>
 
-        {/* Audio Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={toggleAudio}
-          title={isAudioEnabled ? "Disable audio" : "Enable audio"}
-        >
-          {isAudioEnabled ? (
-            <Volume2 className="h-5 w-5" />
-          ) : (
-            <VolumeX className="h-5 w-5 text-gray-400" />
+        {/* Speech-to-Video Button (AI Avatar Conversation) */}
+        <div className="relative">
+          <Button
+            variant={isSpeechToVideoActive ? "default" : "ghost"}
+            size="icon"
+            className={`h-8 w-8 ${isSpeechToVideoActive ? 'bg-purple-500 hover:bg-purple-600 shadow-lg' : 'hover:bg-purple-50 dark:hover:bg-purple-900/20'}`}
+            onClick={toggleSpeechToVideo}
+            disabled={isLoading || isRecording || isTranscribing || isVideoConnecting || isVoiceModeActive}
+            title={isSpeechToVideoActive ? "Stop AI avatar conversation" : "Start AI avatar conversation"}
+          >
+            {isSpeechToVideoActive ? (
+              <Video className="h-5 w-5 text-white animate-pulse" />
+            ) : isVideoConnecting ? (
+              <div className="h-5 w-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Video className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            )}
+          </Button>
+          {isSpeechToVideoActive && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
           )}
-        </Button>
+        </div>
 
         {/* Microphone Button */}
         <Button
@@ -488,6 +673,40 @@ export function Textarea({
           <div className="mb-2">
             <span className="text-xs font-medium text-gray-500">You said:</span>
             <p className="text-sm">{transcript}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Speech-to-Video Status Indicator */}
+      {(isSpeechToVideoActive || isVideoConnecting) && (
+        <div className="absolute -top-16 left-0 right-0 text-center">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm shadow-md ${
+            avatarError 
+              ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+              : avatarSpeaking
+                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+                : isVideoConnecting
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                  : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+          }`}>
+            <Video className="w-3 h-3" />
+            <div className={`w-2 h-2 rounded-full ${
+              avatarError
+                ? 'bg-red-500'
+                : avatarSpeaking 
+                  ? 'bg-green-500 animate-pulse'
+                  : isVideoConnecting
+                    ? 'bg-blue-500 animate-spin'
+                    : 'bg-purple-500 animate-pulse'
+            }`}></div>
+            {avatarError 
+              ? 'Avatar Error'
+              : avatarSpeaking 
+                ? 'AI Avatar Speaking...'
+                : isVideoConnecting
+                  ? 'Connecting Avatar...'
+                  : `AI Avatar ${videoConnectionStatus || 'Ready'}`
+            }
           </div>
         </div>
       )}

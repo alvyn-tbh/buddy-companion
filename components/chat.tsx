@@ -29,7 +29,6 @@ export default function Chat(props: {
   }
 }) {
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [voice, setVoice] = useState<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'>(props.ttsConfig?.defaultVoice || 'alloy');
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
   const [introMessage, setIntroMessage] = useState<TMessage | null>(null);
@@ -144,8 +143,6 @@ export default function Chat(props: {
         chat_url={props.chat_url} 
         features_url={props.features_url} 
         how_it_works_url={props.how_it_works_url}
-        isAudioEnabled={isAudioEnabled}
-        onAudioToggle={setIsAudioEnabled}
         voice={voice}
         onVoiceChange={handleVoiceChange}
       />
@@ -176,8 +173,6 @@ export default function Chat(props: {
           isLoading={isLoading}
           stop={stop}
           handleSubmit={handleSubmit}
-          isAudioEnabled={isAudioEnabled}
-          onAudioToggle={setIsAudioEnabled}
           voice={voice}
         />
       </form>
