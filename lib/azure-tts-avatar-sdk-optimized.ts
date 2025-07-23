@@ -425,7 +425,7 @@ export class AzureTTSAvatarSDKOptimized extends EventTarget {
           setTimeout(() => reject(new Error('Avatar ready timeout')), timeout)
         )
       ]);
-      return this.state.mode === 'avatar';
+      return this.getState().mode === 'avatar';
     } catch {
       return false;
     }

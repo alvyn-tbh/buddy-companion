@@ -231,7 +231,7 @@ export class SpeechToVideoServiceOptimized extends EventTarget {
       this.processNextInQueue();
     });
 
-    this.avatar.on('stateChange', (state: any) => {
+    this.avatar.on('stateChange', (state: { mode: 'avatar' | 'tts' | 'fallback' }) => {
       this.updateState({ mode: state.mode });
     });
   }

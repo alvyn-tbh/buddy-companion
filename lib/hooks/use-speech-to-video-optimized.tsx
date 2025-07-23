@@ -117,7 +117,7 @@ export function useSpeechToVideoOptimized(): UseSpeechToVideoReturn {
       });
 
       // Set up event listeners
-      service.addEventListener('stateChange', (event: any) => {
+      service.addEventListener('stateChange', ((event: CustomEvent<SpeechToVideoState>) => {
         const serviceState = event.detail;
         updateState({
           isActive: serviceState.isActive,
@@ -130,7 +130,7 @@ export function useSpeechToVideoOptimized(): UseSpeechToVideoReturn {
           mode: serviceState.mode,
           error: serviceState.error
         });
-      });
+      }) as EventListener);
 
       service.addEventListener('ready', () => {
         console.log('✅ [SpeechToVideoOptimized Hook] Service ready!');
@@ -140,14 +140,14 @@ export function useSpeechToVideoOptimized(): UseSpeechToVideoReturn {
         });
       });
 
-      service.addEventListener('error', (event: any) => {
+      service.addEventListener('error', ((event: CustomEvent<string>) => {
         console.error('❌ [SpeechToVideoOptimized Hook] Service error:', event.detail);
         updateState({
           error: event.detail,
           isConnecting: false,
           isReady: false
         });
-      });
+      }) as EventListener);
 
       // Initialize with fast mode
       await service.initialize(videoElementRef.current);

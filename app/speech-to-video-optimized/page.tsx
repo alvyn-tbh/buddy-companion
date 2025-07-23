@@ -3,16 +3,14 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  Zap, 
-  Clock, 
-  Cpu, 
-  CheckCircle2, 
-  XCircle,
+  Cpu,
+  Zap,
+  Clock,
+  CheckCircle2,
   AlertTriangle,
   BookOpen,
   Github,
@@ -173,7 +171,7 @@ export default function SpeechToVideoOptimizedPage() {
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Tip:</strong> Click "Start Conversation" and begin speaking immediately. 
+                <strong>Tip:</strong> Click &quot;Start Conversation&quot; and begin speaking immediately. 
                 The AI will respond using TTS while the avatar loads in the background.
               </AlertDescription>
             </Alert>

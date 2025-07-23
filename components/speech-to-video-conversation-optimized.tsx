@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { VideoAvatar } from './video-avatar';
 import { useSpeechToVideoOptimized } from '@/lib/hooks/use-speech-to-video-optimized';
+import type { AvatarConfig } from '@/lib/azure-tts-avatar-sdk-optimized';
 import { toast } from 'sonner';
 import {
   Mic,
@@ -29,6 +30,17 @@ export function SpeechToVideoConversationOptimized({ className = '' }: SpeechToV
   const { state, startSpeechToVideo, stopSpeechToVideo, speakText, isAvailable } = useSpeechToVideoOptimized();
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Avatar configuration for the optimized version
+  const avatarConfig: AvatarConfig = {
+    speechKey: process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || '',
+    speechRegion: process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION || '',
+    avatarCharacter: 'lisa',
+    avatarStyle: 'casual-sitting',
+    voice: 'en-US-JennyNeural',
+    enableFastStart: true,
+    preloadSDK: true
+  };
 
   // Auto-scroll to bottom when new messages appear
   useEffect(() => {
@@ -216,7 +228,12 @@ export function SpeechToVideoConversationOptimized({ className = '' }: SpeechToV
       {/* Video/Avatar Section */}
       <div className="flex-1 flex flex-col">
         <div ref={videoContainerRef} className="relative bg-gray-100 dark:bg-gray-900 h-96">
-          <VideoAvatar className="w-full h-full" />
+          <VideoAvatar 
+            config={avatarConfig}
+            className="w-full h-full" 
+            autoStart={false}
+            hideControls={true}
+          />
           
           {/* Listening indicator overlay */}
           {state.isListening && (
