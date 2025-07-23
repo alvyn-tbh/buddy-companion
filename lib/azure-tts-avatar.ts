@@ -84,7 +84,8 @@ export class AzureTTSAvatar extends EventEmitter {
       // Set video format with more specific configuration
       const videoFormat = new window.SpeechSDK.AvatarVideoFormat();
       videoFormat.bitrate = 2000000; // 2 Mbps
-      avatarConfig.videoFormat = videoFormat;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (avatarConfig as any).videoFormat = videoFormat;
 
       console.log('🔧 Creating avatar synthesizer...');
       console.log('Avatar config:', {
