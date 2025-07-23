@@ -11,12 +11,9 @@ import { SpeechToVideoDebug } from './speech-to-video-debug';
 import { SpeechToVideoService } from '@/lib/speech-to-video-service';
 import { toast } from 'sonner';
 import {
-  Play,
-  RotateCcw,
   AlertCircle,
   Loader2,
   Trash2,
-  Settings,
   Volume2
 } from 'lucide-react';
 
@@ -35,7 +32,6 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
     timestamp: Date;
   }>>([]);
   const [currentAvatar, setCurrentAvatar] = useState<AzureTTSAvatarSDK | null>(null);
-  const [speechToVideoService, setSpeechToVideoService] = useState<SpeechToVideoService | null>(null);
   const [avatarState, setAvatarState] = useState({
     isActive: false,
     isConnecting: false,

@@ -39,6 +39,7 @@ export function Textarea({
   const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [transcript, setTranscript] = useState("");
   const [volume, setVolume] = useState<number>(-50);
   const [isSpeaking, setIsSpeaking] = useState(false);

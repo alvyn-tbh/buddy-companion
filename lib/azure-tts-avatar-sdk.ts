@@ -194,9 +194,13 @@ export class AzureTTSAvatarSDK extends EventTarget {
         return;
       }
 
-      // Validate configuration
-      if (!this.config.speechKey || !this.config.speechRegion) {
-        throw new Error('Missing Azure Speech credentials - speechKey and speechRegion are required');
+      // Enhanced credential validation
+      if (!this.config.speechKey || this.config.speechKey.length < 32) {
+        throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
+      }
+
+      if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
+        throw new Error('Invalid Azure Speech Region format');
       }
 
       console.log('🔑 [Azure Avatar SDK] Creating speech config...');
@@ -216,8 +220,12 @@ export class AzureTTSAvatarSDK extends EventTarget {
           this.speechConfig.speechSynthesisLanguage = 'en-US';
         }
 
-        // Additional configuration for better performance
+        // Enhanced configuration for better performance and reliability
         this.speechConfig.speechSynthesisOutputFormat = window.SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
+        
+        // Add timeout and connection properties based on Azure troubleshooting guide
+        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
+        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
         
       } catch (configError) {
         console.error('❌ [Azure Avatar SDK] Failed to create speech config:', configError);
