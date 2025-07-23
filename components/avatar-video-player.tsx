@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 
 interface AvatarVideoPlayerProps {
-  videoRef?: React.RefObject<HTMLVideoElement>;
-  audioRef?: React.RefObject<HTMLAudioElement>;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
+  audioRef?: React.RefObject<HTMLAudioElement | null>;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onPlayPause?: (isPlaying: boolean) => void;
   className?: string;

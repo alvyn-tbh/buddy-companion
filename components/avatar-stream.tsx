@@ -102,7 +102,9 @@ export function AvatarStream({
 
       // Get media stream (for real-time streaming)
       if ('captureStream' in videoRef.current) {
-        const stream = (videoRef.current as any).captureStream(30); // 30 FPS
+        const stream = (videoRef.current as HTMLVideoElement & {
+          captureStream: (fps: number) => MediaStream;
+        }).captureStream(30); // 30 FPS
         streamRef.current = stream;
         onStreamReady?.(stream);
 
@@ -148,9 +150,6 @@ export function AvatarStream({
 
   // Monitor stream metrics
   const startMetricsMonitoring = () => {
-    let lastBytes = 0;
-    let lastTimestamp = Date.now();
-
     metricsIntervalRef.current = setInterval(() => {
       if (!videoRef.current || !streamRef.current) return;
 
@@ -158,8 +157,6 @@ export function AvatarStream({
       const fps = Math.round(25 + Math.random() * 5);
 
       // Calculate bitrate (simulated for demo)
-      const currentTimestamp = Date.now();
-      const timeDiff = (currentTimestamp - lastTimestamp) / 1000;
       const bitrate = Math.round((Math.random() * 2000 + 3000) * 1024); // 3-5 Mbps
 
       // Calculate latency (simulated for demo)
@@ -177,8 +174,6 @@ export function AvatarStream({
 
       setStreamMetrics({ fps, bitrate, latency, quality });
       setConnectionQuality(connQuality);
-
-      lastTimestamp = currentTimestamp;
     }, 1000);
   };
 
@@ -293,7 +288,7 @@ export function AvatarStream({
             <div className="space-y-2">
               <Label className="text-sm font-medium">Avatar Emotion</Label>
               <div className="flex items-center gap-2">
-                {Object.entries(AVATAR_EMOTIONS).map(([emotion, config]) => {
+                {Object.entries(AVATAR_EMOTIONS).map(([emotion]) => {
                   const Icon = EMOTION_ICONS[emotion as keyof typeof AVATAR_EMOTIONS];
                   return (
                     <Button

@@ -84,7 +84,9 @@ export class AvatarPerformanceMonitor {
   private monitorVideoQuality(): void {
     if (!this.videoElement || !('getVideoPlaybackQuality' in this.videoElement)) return;
 
-    const quality = (this.videoElement as any).getVideoPlaybackQuality();
+    const quality = (this.videoElement as HTMLVideoElement & { 
+      getVideoPlaybackQuality?: () => { droppedVideoFrames?: number } 
+    }).getVideoPlaybackQuality?.();
     if (quality) {
       this.droppedFrameCount = quality.droppedVideoFrames || 0;
       this.metrics.droppedFrames = this.droppedFrameCount;
@@ -101,9 +103,13 @@ export class AvatarPerformanceMonitor {
     this.metrics.frameTime = this.metrics.fps > 0 ? Math.round(1000 / this.metrics.fps) : 0;
 
     // Monitor memory usage (if available)
-    if ('memory' in performance && (performance as any).memory) {
-      const memory = (performance as any).memory;
-      this.metrics.memoryUsage = Math.round(memory.usedJSHeapSize / 1048576); // Convert to MB
+    if ('memory' in performance) {
+      const memory = (performance as typeof performance & { 
+        memory?: { usedJSHeapSize?: number } 
+      }).memory;
+      if (memory?.usedJSHeapSize) {
+        this.metrics.memoryUsage = Math.round(memory.usedJSHeapSize / 1048576); // Convert to MB
+      }
     }
 
     // Simulate CPU usage (in real app, this would come from server metrics)

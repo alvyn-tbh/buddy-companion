@@ -79,19 +79,60 @@ export type AvatarServiceEvents = {
 export interface AvatarState {
   isInitialized: boolean;
   isConnected: boolean;
+  isConnecting: boolean;
   isSpeaking: boolean;
   currentEmotion: keyof typeof AVATAR_EMOTIONS;
   error: Error | null;
 }
 
+// Type definitions for Azure Speech SDK
+interface SpeechConfig {
+  fromSubscription(key: string, region: string): SpeechConfig;
+  speechSynthesisVoiceName: string;
+}
+
+interface AvatarConfig {
+  character: string;
+  style: string;
+}
+
+// Constructor interface for test compatibility
+interface AvatarConfigConstructor {
+  new(): AvatarConfig;
+  new(character: string, style: string): AvatarConfig;
+}
+
+interface AvatarSynthesizer {
+  // Modern promise-based API
+  startAvatarAsync(videoElement: HTMLVideoElement): Promise<MediaStream>;
+  stopAvatarAsync(): Promise<void>;
+  speakSsmlAsync(ssml: string): Promise<void>;
+  // Legacy callback-based API for compatibility
+  startAvatarAsync(videoElement: HTMLVideoElement, success: () => void, error: (err: string) => void): void;
+  speakTextAsync(text: string, success: () => void, error: (err: string) => void): void;
+  // Event handlers
+  avatarEventReceived?: (sender: AvatarSynthesizer, event: AvatarEvent) => void;
+  synthesisCompleted?: () => void;
+  visemeReceived?: (sender: AvatarSynthesizer, event: VisemeEvent) => void;
+}
+
+interface AvatarEvent {
+  offset: number;
+  visemeId: number;
+}
+
+interface VisemeEvent {
+  visemeId: number;
+}
+
 export class AzureAvatarService extends EventEmitter {
   private config: AvatarServiceConfig;
   private state: AvatarState;
-  private speechConfig: any = null;
-  private avatarConfig: any = null;
-  private avatarSynthesizer: any = null;
+  private speechConfig: SpeechConfig | null = null;
+  private avatarConfig: AvatarConfig | null = null;
+  private avatarSynthesizer: AvatarSynthesizer | null = null;
   private videoElement: HTMLVideoElement | null = null;
-  private streamConnection: any = null;
+  private streamConnection: MediaStream | null = null;
   private visemeAnimationFrame: number | null = null;
 
   constructor(config: AvatarServiceConfig) {
@@ -100,6 +141,7 @@ export class AzureAvatarService extends EventEmitter {
     this.state = {
       isInitialized: false,
       isConnected: false,
+      isConnecting: false,
       isSpeaking: false,
       currentEmotion: 'neutral',
       error: null
@@ -217,7 +259,7 @@ export class AzureAvatarService extends EventEmitter {
   private setupEventHandlers(): void {
     if (!this.avatarSynthesizer) return;
 
-    this.avatarSynthesizer.avatarEventReceived = (sender: any, event: any) => {
+    this.avatarSynthesizer.avatarEventReceived = (_sender: AvatarSynthesizer, event: AvatarEvent) => {
       if (event.offset === 0 && event.visemeId === 0) {
         this.emit('speaking-started');
         this.updateState({ isSpeaking: true });
@@ -229,7 +271,7 @@ export class AzureAvatarService extends EventEmitter {
       this.updateState({ isSpeaking: false });
     };
 
-    this.avatarSynthesizer.visemeReceived = (sender: any, event: any) => {
+    this.avatarSynthesizer.visemeReceived = (_sender: AvatarSynthesizer, event: VisemeEvent) => {
       this.emit('viseme', event.visemeId);
       this.animateViseme(event.visemeId);
     };
@@ -239,6 +281,7 @@ export class AzureAvatarService extends EventEmitter {
     // Implement viseme animation logic here
     // This would typically involve updating avatar mouth shapes
     // based on the viseme ID
+    console.debug('Viseme received:', visemeId);
   }
 
   async connect(): Promise<void> {
@@ -247,6 +290,8 @@ export class AzureAvatarService extends EventEmitter {
     }
 
     try {
+      this.updateState({ isConnecting: true });
+      
       // Start avatar video
       const avatarStream = await this.avatarSynthesizer.startAvatarAsync(
         this.videoElement
@@ -256,11 +301,11 @@ export class AzureAvatarService extends EventEmitter {
         this.streamConnection = avatarStream;
       }
 
-      this.updateState({ isConnected: true });
+      this.updateState({ isConnected: true, isConnecting: false });
       this.emit('connected');
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Failed to connect avatar');
-      this.updateState({ error: err });
+      this.updateState({ error: err, isConnecting: false });
       this.emit('error', err);
       throw err;
     }
@@ -273,7 +318,8 @@ export class AzureAvatarService extends EventEmitter {
       await this.avatarSynthesizer.stopAvatarAsync();
       
       if (this.streamConnection) {
-        this.streamConnection.close();
+        // Stop all tracks in the stream
+        this.streamConnection.getTracks().forEach(track => track.stop());
         this.streamConnection = null;
       }
 
@@ -332,14 +378,10 @@ export class AzureAvatarService extends EventEmitter {
   private applyEmotion(emotion: keyof typeof AVATAR_EMOTIONS): void {
     if (!this.avatarConfig) return;
 
-    const emotionConfig = AVATAR_EMOTIONS[emotion];
-    
     // Update avatar style for emotion
-    if (this.avatarConfig) {
-      // This would typically involve updating the avatar's expression
-      // through the Azure API
-      this.updateState({ currentEmotion: emotion });
-    }
+    // This would typically involve updating the avatar's expression
+    // through the Azure API
+    this.updateState({ currentEmotion: emotion });
   }
 
   changeAvatar(character: keyof typeof AVATAR_CHARACTERS, style?: string): void {
@@ -348,7 +390,7 @@ export class AzureAvatarService extends EventEmitter {
     this.config.avatarCharacter = character;
     this.avatarConfig.character = character;
     
-    if (style && AVATAR_CHARACTERS[character].supportedStyles.includes(style as any)) {
+    if (style && (AVATAR_CHARACTERS[character].supportedStyles as readonly string[]).includes(style)) {
       this.config.avatarStyle = style;
       this.avatarConfig.style = style;
     }
@@ -392,6 +434,18 @@ export class AzureAvatarService extends EventEmitter {
 // Declare global window type for Speech SDK
 declare global {
   interface Window {
-    SpeechSDK: any;
+    SpeechSDK: {
+      SpeechConfig: {
+        fromSubscription(key: string, region: string): SpeechConfig;
+      };
+      AvatarConfig: AvatarConfigConstructor;
+      AvatarSynthesizer: new(config: SpeechConfig, avatarConfig: AvatarConfig) => AvatarSynthesizer;
+      // Additional types for compatibility with existing code
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      SpeechSynthesizer?: any;
+      SDK_VERSION?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
+    };
   }
 }

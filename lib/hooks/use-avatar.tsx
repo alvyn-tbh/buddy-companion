@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { AzureAvatarService, AvatarServiceConfig, AvatarState, AvatarStreamOptions } from '@/lib/azure-avatar-service';
+import { AzureAvatarService, AvatarServiceConfig, AvatarState, AvatarStreamOptions, AVATAR_CHARACTERS } from '@/lib/azure-avatar-service';
 import { toast } from 'sonner';
 
 interface UseAvatarOptions extends Partial<AvatarServiceConfig> {
@@ -29,6 +29,7 @@ export function useAvatar(options: UseAvatarOptions = {}): UseAvatarReturn {
   const [avatarState, setAvatarState] = useState<AvatarState>({
     isInitialized: false,
     isConnected: false,
+    isConnecting: false,
     isSpeaking: false,
     currentEmotion: 'neutral',
     error: null
@@ -91,7 +92,7 @@ export function useAvatar(options: UseAvatarOptions = {}): UseAvatarReturn {
     return () => {
       service.destroy();
     };
-  }, []); // Only create service once
+  }, [options]); // Include options in dependency array
 
   const initialize = useCallback(async (videoElement: HTMLVideoElement) => {
     if (!serviceRef.current) {
@@ -148,7 +149,7 @@ export function useAvatar(options: UseAvatarOptions = {}): UseAvatarReturn {
 
   const changeAvatar = useCallback((character: string, style?: string) => {
     if (!serviceRef.current) return;
-    serviceRef.current.changeAvatar(character as any, style);
+    serviceRef.current.changeAvatar(character as keyof typeof AVATAR_CHARACTERS, style);
   }, []);
 
   const changeBackground = useCallback((background: string) => {

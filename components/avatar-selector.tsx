@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Card } from './ui/card';
-import { Button } from './ui/button';
+
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -130,7 +130,7 @@ export function AvatarSelector({
               </SelectContent>
             </Select>
             <div className="text-sm text-gray-500">
-              Different styles affect the avatar's pose and setting
+              Different styles affect the avatar&apos;s pose and setting
             </div>
           </TabsContent>
 
@@ -195,7 +195,7 @@ export function AvatarSelector({
               </SelectContent>
             </Select>
             <div className="text-sm text-gray-500">
-              Choose a voice that matches your avatar's personality
+              Choose a voice that matches your avatar&apos;s personality
             </div>
           </TabsContent>
         </Tabs>
