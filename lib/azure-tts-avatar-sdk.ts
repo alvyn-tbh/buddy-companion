@@ -52,7 +52,9 @@ const AVATAR_SUPPORTED_REGIONS = [
   'westus2'
 ];
 
-export class AzureTTSAvatarSDK extends EventTarget {
+import { EventEmitter } from 'events';
+
+export class AzureTTSAvatarSDK extends EventEmitter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private speechConfig: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

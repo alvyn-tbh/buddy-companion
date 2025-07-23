@@ -1,0 +1,397 @@
+'use client';
+
+import { EventEmitter } from 'events';
+
+// Avatar character and style options
+export const AVATAR_CHARACTERS = {
+  lisa: { 
+    name: 'Lisa',
+    description: 'Professional female presenter',
+    supportedStyles: ['graceful-sitting', 'technical-sitting', 'casual-sitting']
+  },
+  michael: {
+    name: 'Michael',
+    description: 'Professional male presenter',
+    supportedStyles: ['graceful-standing', 'technical-standing', 'casual-standing']
+  },
+  sam: {
+    name: 'Sam',
+    description: 'Casual male presenter',
+    supportedStyles: ['casual-sitting', 'technical-sitting']
+  },
+  kate: {
+    name: 'Kate',
+    description: 'Friendly female presenter',
+    supportedStyles: ['graceful-sitting', 'casual-sitting']
+  }
+} as const;
+
+export const AVATAR_BACKGROUNDS = {
+  default: { name: 'Default', value: '#f0f0f0' },
+  office: { name: 'Office', value: 'url(/backgrounds/office.jpg)' },
+  studio: { name: 'Studio', value: 'url(/backgrounds/studio.jpg)' },
+  home: { name: 'Home', value: 'url(/backgrounds/home.jpg)' },
+  nature: { name: 'Nature', value: 'url(/backgrounds/nature.jpg)' },
+  gradient: { name: 'Gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
+} as const;
+
+// Emotion mapping for avatar expressions
+export const AVATAR_EMOTIONS = {
+  neutral: { avatarStyle: 'neutral', intensity: 0.5 },
+  happy: { avatarStyle: 'happy', intensity: 0.8 },
+  sad: { avatarStyle: 'sad', intensity: 0.7 },
+  angry: { avatarStyle: 'angry', intensity: 0.9 },
+  surprised: { avatarStyle: 'surprised', intensity: 0.8 },
+  thoughtful: { avatarStyle: 'thoughtful', intensity: 0.6 }
+} as const;
+
+export interface AvatarServiceConfig {
+  speechKey: string;
+  speechRegion: string;
+  avatarCharacter?: keyof typeof AVATAR_CHARACTERS;
+  avatarStyle?: string;
+  voice?: string;
+  background?: keyof typeof AVATAR_BACKGROUNDS;
+  customBackground?: string;
+  enableEmotions?: boolean;
+  streamingMode?: boolean;
+}
+
+export interface AvatarStreamOptions {
+  text: string;
+  emotion?: keyof typeof AVATAR_EMOTIONS;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+}
+
+export type AvatarServiceEvents = {
+  'initialized': () => void;
+  'connected': () => void;
+  'disconnected': () => void;
+  'speaking-started': () => void;
+  'speaking-completed': () => void;
+  'viseme': (visemeId: number) => void;
+  'error': (error: Error) => void;
+  'state-changed': (state: AvatarState) => void;
+};
+
+export interface AvatarState {
+  isInitialized: boolean;
+  isConnected: boolean;
+  isSpeaking: boolean;
+  currentEmotion: keyof typeof AVATAR_EMOTIONS;
+  error: Error | null;
+}
+
+export class AzureAvatarService extends EventEmitter {
+  private config: AvatarServiceConfig;
+  private state: AvatarState;
+  private speechConfig: any = null;
+  private avatarConfig: any = null;
+  private avatarSynthesizer: any = null;
+  private videoElement: HTMLVideoElement | null = null;
+  private streamConnection: any = null;
+  private visemeAnimationFrame: number | null = null;
+
+  constructor(config: AvatarServiceConfig) {
+    super();
+    this.config = config;
+    this.state = {
+      isInitialized: false,
+      isConnected: false,
+      isSpeaking: false,
+      currentEmotion: 'neutral',
+      error: null
+    };
+  }
+
+  // Emit typed events
+  emit<K extends keyof AvatarServiceEvents>(
+    event: K,
+    ...args: Parameters<AvatarServiceEvents[K]>
+  ): boolean {
+    return super.emit(event, ...args);
+  }
+
+  on<K extends keyof AvatarServiceEvents>(
+    event: K,
+    listener: AvatarServiceEvents[K]
+  ): this {
+    return super.on(event, listener);
+  }
+
+  private updateState(updates: Partial<AvatarState>) {
+    this.state = { ...this.state, ...updates };
+    this.emit('state-changed', this.state);
+  }
+
+  async initialize(videoElement: HTMLVideoElement): Promise<void> {
+    try {
+      this.videoElement = videoElement;
+
+      // Load Speech SDK
+      await this.loadSpeechSDK();
+
+      // Create speech config
+      const SpeechSDK = window.SpeechSDK;
+      this.speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
+        this.config.speechKey,
+        this.config.speechRegion
+      );
+
+      // Configure avatar
+      this.avatarConfig = new SpeechSDK.AvatarConfig();
+      this.avatarConfig.character = this.config.avatarCharacter || 'lisa';
+      this.avatarConfig.style = this.config.avatarStyle || 'casual-sitting';
+      
+      if (this.config.voice) {
+        this.speechConfig.speechSynthesisVoiceName = this.config.voice;
+      }
+
+      // Set background
+      this.applyBackground();
+
+      // Create avatar synthesizer
+      this.avatarSynthesizer = new SpeechSDK.AvatarSynthesizer(
+        this.speechConfig,
+        this.avatarConfig
+      );
+
+      // Set up event handlers
+      this.setupEventHandlers();
+
+      this.updateState({ isInitialized: true });
+      this.emit('initialized');
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error('Failed to initialize avatar service');
+      this.updateState({ error: err });
+      this.emit('error', err);
+      throw err;
+    }
+  }
+
+  private async loadSpeechSDK(): Promise<void> {
+    if (window.SpeechSDK) return;
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://aka.ms/csspeech/jsbrowserpackageraw';
+      script.async = true;
+
+      script.onload = () => {
+        if (window.SpeechSDK) {
+          resolve();
+        } else {
+          reject(new Error('Speech SDK loaded but not available'));
+        }
+      };
+
+      script.onerror = () => {
+        reject(new Error('Failed to load Speech SDK'));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  private applyBackground(): void {
+    if (!this.videoElement) return;
+
+    const background = this.config.customBackground || 
+      (this.config.background && AVATAR_BACKGROUNDS[this.config.background]?.value) ||
+      AVATAR_BACKGROUNDS.default.value;
+
+    if (background.startsWith('url(') || background.includes('gradient')) {
+      this.videoElement.style.backgroundImage = background;
+      this.videoElement.style.backgroundColor = 'transparent';
+    } else {
+      this.videoElement.style.backgroundColor = background;
+      this.videoElement.style.backgroundImage = 'none';
+    }
+
+    this.videoElement.style.backgroundSize = 'cover';
+    this.videoElement.style.backgroundPosition = 'center';
+  }
+
+  private setupEventHandlers(): void {
+    if (!this.avatarSynthesizer) return;
+
+    this.avatarSynthesizer.avatarEventReceived = (sender: any, event: any) => {
+      if (event.offset === 0 && event.visemeId === 0) {
+        this.emit('speaking-started');
+        this.updateState({ isSpeaking: true });
+      }
+    };
+
+    this.avatarSynthesizer.synthesisCompleted = () => {
+      this.emit('speaking-completed');
+      this.updateState({ isSpeaking: false });
+    };
+
+    this.avatarSynthesizer.visemeReceived = (sender: any, event: any) => {
+      this.emit('viseme', event.visemeId);
+      this.animateViseme(event.visemeId);
+    };
+  }
+
+  private animateViseme(visemeId: number): void {
+    // Implement viseme animation logic here
+    // This would typically involve updating avatar mouth shapes
+    // based on the viseme ID
+  }
+
+  async connect(): Promise<void> {
+    if (!this.state.isInitialized || !this.avatarSynthesizer || !this.videoElement) {
+      throw new Error('Avatar service not initialized');
+    }
+
+    try {
+      // Start avatar video
+      const avatarStream = await this.avatarSynthesizer.startAvatarAsync(
+        this.videoElement
+      );
+
+      if (this.config.streamingMode) {
+        this.streamConnection = avatarStream;
+      }
+
+      this.updateState({ isConnected: true });
+      this.emit('connected');
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error('Failed to connect avatar');
+      this.updateState({ error: err });
+      this.emit('error', err);
+      throw err;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (!this.avatarSynthesizer) return;
+
+    try {
+      await this.avatarSynthesizer.stopAvatarAsync();
+      
+      if (this.streamConnection) {
+        this.streamConnection.close();
+        this.streamConnection = null;
+      }
+
+      if (this.visemeAnimationFrame) {
+        cancelAnimationFrame(this.visemeAnimationFrame);
+        this.visemeAnimationFrame = null;
+      }
+
+      this.updateState({ isConnected: false, isSpeaking: false });
+      this.emit('disconnected');
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error('Failed to disconnect avatar');
+      this.emit('error', err);
+    }
+  }
+
+  async speak(options: AvatarStreamOptions): Promise<void> {
+    if (!this.state.isConnected || !this.avatarSynthesizer) {
+      throw new Error('Avatar not connected');
+    }
+
+    try {
+      // Apply emotion if enabled
+      if (this.config.enableEmotions && options.emotion) {
+        this.applyEmotion(options.emotion);
+      }
+
+      // Configure speech synthesis parameters
+      const ssml = this.buildSSML(options);
+
+      // Start speaking
+      await this.avatarSynthesizer.speakSsmlAsync(ssml);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error('Failed to speak');
+      this.emit('error', err);
+      throw err;
+    }
+  }
+
+  private buildSSML(options: AvatarStreamOptions): string {
+    const rate = options.rate || 1.0;
+    const pitch = options.pitch || 1.0;
+    const volume = options.volume || 1.0;
+
+    return `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+        <voice name="${this.config.voice || 'en-US-JennyNeural'}">
+          <prosody rate="${rate}" pitch="${pitch}%" volume="${volume}">
+            ${options.text}
+          </prosody>
+        </voice>
+      </speak>
+    `;
+  }
+
+  private applyEmotion(emotion: keyof typeof AVATAR_EMOTIONS): void {
+    if (!this.avatarConfig) return;
+
+    const emotionConfig = AVATAR_EMOTIONS[emotion];
+    
+    // Update avatar style for emotion
+    if (this.avatarConfig) {
+      // This would typically involve updating the avatar's expression
+      // through the Azure API
+      this.updateState({ currentEmotion: emotion });
+    }
+  }
+
+  changeAvatar(character: keyof typeof AVATAR_CHARACTERS, style?: string): void {
+    if (!this.avatarConfig) return;
+
+    this.config.avatarCharacter = character;
+    this.avatarConfig.character = character;
+    
+    if (style && AVATAR_CHARACTERS[character].supportedStyles.includes(style as any)) {
+      this.config.avatarStyle = style;
+      this.avatarConfig.style = style;
+    }
+
+    // Reconnect with new avatar if connected
+    if (this.state.isConnected) {
+      this.disconnect().then(() => this.connect());
+    }
+  }
+
+  changeBackground(background: keyof typeof AVATAR_BACKGROUNDS | string): void {
+    if (typeof background === 'string' && background in AVATAR_BACKGROUNDS) {
+      this.config.background = background as keyof typeof AVATAR_BACKGROUNDS;
+      this.config.customBackground = undefined;
+    } else {
+      this.config.customBackground = background;
+      this.config.background = undefined;
+    }
+
+    this.applyBackground();
+  }
+
+  getState(): AvatarState {
+    return { ...this.state };
+  }
+
+  isReady(): boolean {
+    return this.state.isInitialized && this.state.isConnected && !this.state.error;
+  }
+
+  destroy(): void {
+    this.disconnect();
+    this.removeAllListeners();
+    this.speechConfig = null;
+    this.avatarConfig = null;
+    this.avatarSynthesizer = null;
+    this.videoElement = null;
+  }
+}
+
+// Declare global window type for Speech SDK
+declare global {
+  interface Window {
+    SpeechSDK: any;
+  }
+}
