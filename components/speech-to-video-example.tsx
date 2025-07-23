@@ -7,7 +7,6 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { AzureTTSAvatarSDK, AvatarConfig } from '@/lib/azure-tts-avatar-sdk';
-import { SpeechToVideoDebug } from './speech-to-video-debug';
 import { toast } from 'sonner';
 import {
   Play,
@@ -164,25 +163,7 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
       </div>
 
       {/* Comprehensive Debug Panel */}
-      <SpeechToVideoDebug
-        isActive={avatarState.isActive}
-        isConnecting={avatarState.isConnecting}
-        connectionStatus={avatarState.connectionStatus}
-        error={avatarState.error}
-        onRetry={() => {
-          if (currentAvatar) {
-            currentAvatar.disconnect();
-            setCurrentAvatar(null);
-            setAvatarState({
-              isActive: false,
-              isConnecting: false,
-              connectionStatus: 'Disconnected',
-              error: null,
-              isReady: false
-            });
-          }
-        }}
-      />
+      {/* Debug panel is now available in the demo page */}
 
       {/* Main Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

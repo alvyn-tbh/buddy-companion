@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 // Declare global window types
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     SpeechSDK: any;
   }
 }
@@ -88,12 +89,12 @@ export default function TestAvatarPage() {
       // Synthesize speech
       synthesizer.speakTextAsync(
         'Hello! This is a test of Azure Text to Speech.',
-        (result: any) => {
+        () => {
           addLog('✅ TTS successful!');
           synthesizer.close();
           setStatus('Basic TTS working!');
         },
-        (error: any) => {
+        (error: string) => {
           addLog(`❌ TTS error: ${error}`);
           synthesizer.close();
           setStatus('TTS failed');
@@ -177,12 +178,12 @@ export default function TestAvatarPage() {
             () => {
               addLog('✅ Avatar speech successful!');
             },
-            (error: any) => {
+            (error: string) => {
               addLog(`❌ Avatar speech error: ${error}`);
             }
           );
         },
-        (error: any) => {
+        (error: string) => {
           addLog(`❌ Avatar start error: ${error}`);
           setStatus('Avatar failed to start');
         }

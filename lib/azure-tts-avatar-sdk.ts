@@ -454,6 +454,7 @@ export class AzureTTSAvatarSDK extends EventTarget {
         this.emit('synthesisCompleted');
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.speechSynthesizer.synthesisCanceled = (error: any) => {
         console.error('❌ [Azure Avatar SDK] TTS synthesis canceled:', error);
         this.updateState({
