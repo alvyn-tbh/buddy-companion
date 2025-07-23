@@ -441,4 +441,4 @@ export class RealtimeWebRTC {
   getNoiseFloor(): number {
     return this.vad?.getNoiseFloor() || -50;
   }
-} 
+}

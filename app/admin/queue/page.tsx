@@ -37,4 +37,4 @@ export default function QueueAdminPage() {
       </div>
     </div>
   );
-} 
+}

@@ -317,4 +317,4 @@ export function SpeechToVideoExample({ className = '' }: SpeechToVideoExamplePro
   );
 }
 
-export default SpeechToVideoExample; 
+export default SpeechToVideoExample;

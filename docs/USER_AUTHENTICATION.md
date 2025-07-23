@@ -512,4 +512,4 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 ```
 
-This authentication system provides a solid foundation for user management in your application. It's secure, user-friendly, and easily extensible for future requirements. 
+This authentication system provides a solid foundation for user management in your application. It's secure, user-friendly, and easily extensible for future requirements.

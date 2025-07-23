@@ -93,4 +93,4 @@ export function AdminNav({ onLogout }: AdminNavProps) {
       </div>
     </div>
   );
-} 
+}

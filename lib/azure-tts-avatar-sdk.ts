@@ -803,4 +803,4 @@ export class AzureTTSAvatarSDK extends EventTarget {
   }
 }
 
-export default AzureTTSAvatarSDK; 
+export default AzureTTSAvatarSDK;

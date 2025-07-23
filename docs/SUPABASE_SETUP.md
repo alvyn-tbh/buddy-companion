@@ -89,4 +89,4 @@ console.log('SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 - Never commit your `.env.local` file to version control
 - The `SUPABASE_SERVICE_ROLE_KEY` should only be used on the server side
 - The `NEXT_PUBLIC_` prefixed variables are safe to expose to the client
-- Rotate your keys regularly in production 
+- Rotate your keys regularly in production

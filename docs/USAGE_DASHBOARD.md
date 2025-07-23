@@ -165,4 +165,4 @@ Enable debug logging by setting:
 DEBUG_USAGE=true
 ```
 
-This will log all usage tracking events to the console. 
+This will log all usage tracking events to the console.

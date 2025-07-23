@@ -163,4 +163,4 @@ export function UserProfile({ className = '' }: UserProfileProps) {
       )}
     </div>
   );
-} 
+}

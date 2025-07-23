@@ -219,6 +219,35 @@ export default function HomePage() {
             ))}
           </div>
         </motion.section>
+
+        {/* Advanced Features */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.8, duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-xl sm:text-3xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Advanced AI Features
+          </h2>
+          <p className="text-base sm:text-lg text-gray-600 mb-8">
+            Experience cutting-edge AI interactions with visual avatars and real-time conversations.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
+            <Link
+              href="/speech-to-video-optimized"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex items-center gap-2"
+            >
+              <span>⚡</span> Speech-to-Video AI (Optimized)
+            </Link>
+            <Link
+              href="/speech-to-video-demo"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-3 px-6 rounded-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex items-center gap-2"
+            >
+              <span>🎬</span> Speech-to-Video Demo
+            </Link>
+          </div>
+        </motion.section>
       </div>
 
       <Footer />

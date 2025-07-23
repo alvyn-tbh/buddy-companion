@@ -150,4 +150,4 @@ Once working:
 - Explore different avatar characters (lisa, anna, james, etc.)
 - Try different voices (Jenny, Guy, Aria, etc.)
 - Customize avatar styles (casual-sitting, business-sitting, etc.)
-- Visit `/speech-to-video-demo` for full demonstration 
+- Visit `/speech-to-video-demo` for full demonstration

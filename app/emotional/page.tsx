@@ -247,4 +247,4 @@ const EmotionalPage = () => {
     );
 };
 
-export default EmotionalPage; 
+export default EmotionalPage;

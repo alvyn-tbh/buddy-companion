@@ -211,4 +211,4 @@ export class AzureSpeechDiagnosticHelper {
 
     return result;
   }
-} 
+}

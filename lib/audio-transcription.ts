@@ -205,4 +205,4 @@ export function getSupportedAudioFormats(): string[] {
     'wav',
     'webm'
   ];
-} 
+}

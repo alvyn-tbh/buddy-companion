@@ -35,4 +35,4 @@ export default function AuthPage() {
       <AuthForm />
     </div>
   );
-} 
+}

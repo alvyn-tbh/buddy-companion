@@ -340,4 +340,4 @@ await service.initialize(videoElement);
 service.startListening();
 ```
 
-This integration provides a seamless, professional-grade speech-to-video conversational experience optimized for corporate wellness and emotional support scenarios. 
+This integration provides a seamless, professional-grade speech-to-video conversational experience optimized for corporate wellness and emotional support scenarios.

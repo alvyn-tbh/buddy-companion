@@ -126,4 +126,4 @@ You can specify a voice when using the TTS functionality:
 
 // In hooks
 playText("Hello world", "echo")
-``` 
+```

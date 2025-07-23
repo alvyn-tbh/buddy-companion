@@ -337,4 +337,4 @@ export function VideoAvatar({
       </div>
     </Card>
   );
-} 
+}

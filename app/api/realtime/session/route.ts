@@ -49,4 +49,4 @@ export async function GET() {
     ],
     supportedVoices: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
   });
-} 
+}

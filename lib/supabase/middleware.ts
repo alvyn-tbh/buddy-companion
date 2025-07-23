@@ -62,4 +62,4 @@ export async function updateSession(request: NextRequest) {
   // 3. Change the myNewResponse object instead of the supabaseResponse object
 
   return supabaseResponse
-} 
+}

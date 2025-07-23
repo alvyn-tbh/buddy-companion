@@ -226,4 +226,4 @@ export function useSpeechToVideo(): UseSpeechToVideoReturn {
   };
 }
 
-export default useSpeechToVideo; 
+export default useSpeechToVideo;

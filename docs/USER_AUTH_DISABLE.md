@@ -121,4 +121,5 @@ USER_AUTH=false NEXT_PUBLIC_USER_AUTH=false npm run dev
 2. **Test with auth enabled**:
    - Set `USER_AUTH=true` and `NEXT_PUBLIC_USER_AUTH=true`
    - Visit `/corporate/chat` - should redirect to `/corporate`
-   - Check header - should show "Sign In" button 
+   - Check header - should show "Sign In" button
+   

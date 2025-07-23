@@ -281,4 +281,4 @@ For issues or questions about the Supabase integration:
 1. Check the troubleshooting section above
 2. Review the Supabase documentation
 3. Check the application logs for error messages
-4. Verify your environment variables and database schema 
+4. Verify your environment variables and database schema

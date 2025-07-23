@@ -63,4 +63,4 @@ export function getRateLimitInfo(identifier: string) {
     remaining: Math.max(0, 10 - info.count),
     resetTime: info.resetTime,
   };
-} 
+}
