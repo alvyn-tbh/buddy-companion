@@ -4,6 +4,15 @@
  * Azure Text-to-Speech Avatar Service
  * Based on Microsoft Azure Speech SDK documentation:
  * https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech-avatar/real-time-synthesis-avatar
+ * 
+ * Note: Avatar feature is only available in specific regions:
+ * - Southeast Asia
+ * - North Europe  
+ * - West Europe
+ * - Sweden Central
+ * - South Central US
+ * - East US 2
+ * - West US 2
  */
 
 // Import Speech SDK dynamically for client-side usage
@@ -32,6 +41,17 @@ export interface AvatarState {
   error: string | null;
 }
 
+// Regions that support Avatar feature
+const AVATAR_SUPPORTED_REGIONS = [
+  'southeastasia',
+  'northeurope',
+  'westeurope',
+  'swedencentral',
+  'southcentralus',
+  'eastus2',
+  'westus2'
+];
+
 export class AzureTTSAvatarSDK extends EventTarget {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private speechConfig: any = null;
@@ -39,10 +59,14 @@ export class AzureTTSAvatarSDK extends EventTarget {
   private avatarConfig: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private avatarSynthesizer: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private speechSynthesizer: any = null;
   private videoElement: HTMLVideoElement | null = null;
   private config: AvatarConfig;
   private state: AvatarState;
   private isSDKLoaded = false;
+  private isAvatarSupported = false;
+  private isFallbackMode = false;
 
   constructor(config: AvatarConfig) {
     super();
@@ -54,6 +78,11 @@ export class AzureTTSAvatarSDK extends EventTarget {
       connectionStatus: 'Disconnected',
       error: null
     };
+    
+    // Check if region supports Avatar
+    if (!AVATAR_SUPPORTED_REGIONS.includes(config.speechRegion.toLowerCase())) {
+      console.warn(`⚠️ [Azure Avatar SDK] Region '${config.speechRegion}' may not support Avatar feature. Supported regions: ${AVATAR_SUPPORTED_REGIONS.join(', ')}`);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,14 +143,17 @@ export class AzureTTSAvatarSDK extends EventTarget {
         clearTimeout(loadTimeout);
         this.isSDKLoaded = true;
         console.log('✅ [Azure Avatar SDK] Speech SDK already available');
+        this.checkAvatarSupport();
         resolve();
         return;
       }
 
       // Create script element for Speech SDK with multiple fallback URLs
       const sdkUrls = [
+        // Use specific version that includes Avatar support
         'https://aka.ms/csspeech/jsbrowserpackageraw',
-        'https://csspeechstorage.blob.core.windows.net/drop/1.34.0/MicrosoftCognitiveServicesSpeech-1.34.0.js',
+        'https://csspeechstorage.blob.core.windows.net/drop/1.36.0/microsoft.cognitiveservices.speech.sdk.bundle-min.js',
+        'https://csspeechstorage.blob.core.windows.net/drop/1.35.0/microsoft.cognitiveservices.speech.sdk.bundle-min.js',
         'https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle.js'
       ];
 
@@ -144,6 +176,21 @@ export class AzureTTSAvatarSDK extends EventTarget {
         script.onload = () => {
           clearTimeout(loadTimeout);
           console.log(`✅ [Azure Avatar SDK] Speech SDK loaded from: ${sdkUrls[currentUrlIndex]}`);
+          
+          // Log available SDK features
+          if (window.SpeechSDK) {
+            console.log('📦 [Azure Avatar SDK] Available SDK features:', {
+              SpeechConfig: !!window.SpeechSDK.SpeechConfig,
+              SpeechSynthesizer: !!window.SpeechSDK.SpeechSynthesizer,
+              AvatarConfig: !!window.SpeechSDK.AvatarConfig,
+              AvatarSynthesizer: !!window.SpeechSDK.AvatarSynthesizer,
+              SpeechRecognizer: !!window.SpeechSDK.SpeechRecognizer,
+              SDK_Version: window.SpeechSDK.SDK_VERSION || 'Unknown'
+            });
+            
+            this.checkAvatarSupport();
+          }
+          
           this.isSDKLoaded = true;
           resolve();
         };
@@ -160,6 +207,19 @@ export class AzureTTSAvatarSDK extends EventTarget {
 
       tryLoadSDK();
     });
+  }
+
+  private checkAvatarSupport(): void {
+    if (window.SpeechSDK) {
+      this.isAvatarSupported = !!(window.SpeechSDK.AvatarConfig && window.SpeechSDK.AvatarSynthesizer);
+      console.log(`🎭 [Azure Avatar SDK] Avatar support: ${this.isAvatarSupported ? 'Available' : 'Not available'}`);
+      
+      if (!this.isAvatarSupported) {
+        console.log('📋 [Azure Avatar SDK] Available SDK classes:', 
+          Object.keys(window.SpeechSDK).filter(key => typeof window.SpeechSDK[key] === 'function')
+        );
+      }
+    }
   }
 
   public async initialize(videoElement: HTMLVideoElement): Promise<void> {
@@ -188,21 +248,18 @@ export class AzureTTSAvatarSDK extends EventTarget {
         return;
       }
 
-      // Load Speech SDK
-      await this.loadSpeechSDK();
+      // Enhanced credential validation based on Azure troubleshooting guide
+      if (!this.config.speechKey || this.config.speechKey.length < 32) {
+        throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
+      }
 
-              // Enhanced credential validation based on Azure troubleshooting guide
-        if (!this.config.speechKey || this.config.speechKey.length < 32) {
-          throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
-        }
+      if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
+        throw new Error('Invalid Azure Speech Region format');
+      }
 
-        if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
-          throw new Error('Invalid Azure Speech Region format');
-        }
-
-        // Validate credentials with Azure service
-        this.updateState({ connectionStatus: 'Validating Azure credentials...' });
-        await this.validateAzureCredentials();
+      // Validate credentials with Azure service
+      this.updateState({ connectionStatus: 'Validating Azure credentials...' });
+      await this.validateAzureCredentials();
 
       console.log('🔑 [Azure Avatar SDK] Creating speech config...');
       this.updateState({ connectionStatus: 'Creating speech configuration...' });
@@ -213,24 +270,37 @@ export class AzureTTSAvatarSDK extends EventTarget {
         this.config.speechRegion
       );
 
-              // Set voice
-        if (this.config.voice) {
-          this.speechConfig.speechSynthesisVoiceName = this.config.voice;
-        } else {
-          this.speechConfig.speechSynthesisLanguage = 'en-US';
-        }
+      // Set voice
+      if (this.config.voice) {
+        this.speechConfig.speechSynthesisVoiceName = this.config.voice;
+      } else {
+        this.speechConfig.speechSynthesisLanguage = 'en-US';
+      }
 
-        // Add timeout properties based on Azure troubleshooting guide
-        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
-        this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
+      // Add timeout properties based on Azure troubleshooting guide
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
+
+      // Check if Avatar is supported
+      if (!this.isAvatarSupported) {
+        console.warn('⚠️ [Azure Avatar SDK] Avatar API not available, using TTS fallback mode');
+        this.initializeTTSFallbackMode();
+        return;
+      }
 
       console.log('🎭 [Azure Avatar SDK] Creating avatar config...');
       this.updateState({ connectionStatus: 'Creating avatar configuration...' });
 
       // Create avatar configuration
+      // Note: The Avatar API might be different in newer SDK versions
+      // Using the approach from Azure samples
+      const talkingAvatarCharacter = this.config.avatarCharacter || 'lisa';
+      const talkingAvatarStyle = this.config.avatarStyle || 'casual-sitting';
+      
+      // Create avatar config
       this.avatarConfig = new window.SpeechSDK.AvatarConfig(
-        this.config.avatarCharacter || 'lisa',
-        this.config.avatarStyle || 'casual-sitting'
+        talkingAvatarCharacter,
+        talkingAvatarStyle
       );
 
       // Set background if specified
@@ -290,6 +360,18 @@ export class AzureTTSAvatarSDK extends EventTarget {
     } catch (error) {
       console.error('💥 [Azure Avatar SDK] Initialization failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Initialization failed';
+      
+      // If avatar fails, try TTS fallback
+      if (!this.isFallbackMode) {
+        console.log('🔄 [Azure Avatar SDK] Attempting TTS fallback mode...');
+        try {
+          this.initializeTTSFallbackMode();
+          return;
+        } catch (fallbackError) {
+          console.error('❌ [Azure Avatar SDK] Fallback mode also failed:', fallbackError);
+        }
+      }
+      
       this.updateState({
         error: errorMessage,
         isConnecting: false,
@@ -345,8 +427,83 @@ export class AzureTTSAvatarSDK extends EventTarget {
     };
   }
 
+  private initializeTTSFallbackMode(): void {
+    console.log('🔄 [Azure Avatar SDK] Initializing TTS fallback mode...');
+    this.isFallbackMode = true;
+    
+    try {
+      // Create a regular speech synthesizer
+      this.speechSynthesizer = new window.SpeechSDK.SpeechSynthesizer(this.speechConfig);
+      
+      // Set up TTS event handlers
+      this.speechSynthesizer.synthesisStarted = () => {
+        console.log('🗣️ [Azure Avatar SDK] TTS synthesis started');
+        this.updateState({
+          isSpeaking: true,
+          connectionStatus: 'Speaking (TTS)'
+        });
+        this.emit('synthesisStarted');
+      };
+
+      this.speechSynthesizer.synthesisCompleted = () => {
+        console.log('✅ [Azure Avatar SDK] TTS synthesis completed');
+        this.updateState({
+          isSpeaking: false,
+          connectionStatus: 'Connected (TTS Mode)'
+        });
+        this.emit('synthesisCompleted');
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.speechSynthesizer.synthesisCanceled = (error: any) => {
+        console.error('❌ [Azure Avatar SDK] TTS synthesis canceled:', error);
+        this.updateState({
+          isSpeaking: false,
+          error: `TTS synthesis canceled: ${error}`,
+          connectionStatus: 'Error'
+        });
+        this.emit('error', new Error(`TTS synthesis canceled: ${error}`));
+      };
+      
+      // Show placeholder in video element
+      if (this.videoElement) {
+        this.videoElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        this.videoElement.style.display = 'flex';
+        this.videoElement.style.alignItems = 'center';
+        this.videoElement.style.justifyContent = 'center';
+        this.videoElement.style.color = 'white';
+        this.videoElement.style.fontSize = '16px';
+        this.videoElement.style.textAlign = 'center';
+        this.videoElement.innerHTML = `
+          <div style="padding: 20px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 10px;">🎭</div>
+            <div style="font-size: 20px; font-weight: bold;">AI Avatar</div>
+            <div style="font-size: 14px; opacity: 0.8; margin-top: 10px;">
+              TTS Mode - Visual avatar unavailable
+            </div>
+          </div>
+        `;
+      }
+      
+      this.updateState({
+        isConnected: true,
+        isConnecting: false,
+        connectionStatus: 'Connected (TTS Mode)',
+        error: null
+      });
+
+      this.emit('connected');
+      console.log('✅ [Azure Avatar SDK] TTS fallback mode initialized successfully');
+      
+    } catch (error) {
+      console.error('❌ [Azure Avatar SDK] Failed to initialize TTS fallback:', error);
+      throw error;
+    }
+  }
+
   private initializeFallbackMode(): void {
     console.log('🔄 [Azure Avatar SDK] Initializing fallback mode...');
+    this.isFallbackMode = true;
     this.updateState({
       isConnected: true,
       isConnecting: false,
@@ -375,17 +532,6 @@ export class AzureTTSAvatarSDK extends EventTarget {
     }
 
     this.emit('connected');
-    
-    // Auto-speak intro message
-    setTimeout(async () => {
-      try {
-        const { corporate } = await import('@/lib/intro-prompt');
-        console.log('🎤 [Azure Avatar SDK] Speaking intro message (fallback)...');
-        await this.speakText(corporate);
-      } catch (error) {
-        console.error('❌ [Azure Avatar SDK] Failed to speak intro message:', error);
-      }
-    }, 1000);
   }
 
   public async speakText(text: string): Promise<void> {
@@ -396,8 +542,8 @@ export class AzureTTSAvatarSDK extends EventTarget {
     console.log('🎤 [Azure Avatar SDK] Speaking text:', text.substring(0, 100) + '...');
 
     // Check if we're in fallback mode (no Azure SDK)
-    if (!this.avatarSynthesizer && this.state.connectionStatus.includes('Fallback')) {
-      console.log('🔊 [Azure Avatar SDK] Using fallback audio synthesis');
+    if (this.isFallbackMode && !this.speechSynthesizer) {
+      console.log('🔊 [Azure Avatar SDK] Using browser speech synthesis');
       
       this.updateState({ isSpeaking: true });
       this.emit('synthesisStarted');
@@ -431,7 +577,28 @@ export class AzureTTSAvatarSDK extends EventTarget {
       });
     }
 
-    // Original Azure SDK method
+    // Use TTS mode if available
+    if (this.speechSynthesizer && this.isFallbackMode) {
+      return new Promise<void>((resolve, reject) => {
+        this.speechSynthesizer.speakTextAsync(
+          text,
+          () => {
+            console.log('✅ [Azure Avatar SDK] TTS synthesis completed');
+            resolve();
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (error: any) => {
+            console.error('❌ [Azure Avatar SDK] TTS synthesis failed:', error);
+            const errorMessage = `TTS synthesis failed: ${error}`;
+            this.updateState({ error: errorMessage });
+            this.emit('error', new Error(errorMessage));
+            reject(new Error(errorMessage));
+          }
+        );
+      });
+    }
+
+    // Original Azure Avatar method
     if (!this.isReady()) {
       throw new Error('Avatar not ready for speech synthesis');
     }
@@ -500,6 +667,21 @@ export class AzureTTSAvatarSDK extends EventTarget {
         });
       });
     }
+    
+    if (this.speechSynthesizer && this.state.isSpeaking) {
+      console.log('⏹️ [Azure Avatar SDK] Stopping TTS speech...');
+      
+      return new Promise<void>((resolve) => {
+        this.speechSynthesizer.stopSpeakingAsync(() => {
+          console.log('✅ [Azure Avatar SDK] TTS speech stopped');
+          this.updateState({
+            isSpeaking: false,
+            connectionStatus: 'Connected (TTS Mode)'
+          });
+          resolve();
+        });
+      });
+    }
   }
 
   public disconnect(): void {
@@ -511,6 +693,11 @@ export class AzureTTSAvatarSDK extends EventTarget {
         this.avatarSynthesizer = null;
       }
 
+      if (this.speechSynthesizer) {
+        this.speechSynthesizer.close();
+        this.speechSynthesizer = null;
+      }
+
       if (this.speechConfig) {
         this.speechConfig.close();
         this.speechConfig = null;
@@ -518,6 +705,7 @@ export class AzureTTSAvatarSDK extends EventTarget {
 
       this.avatarConfig = null;
       this.videoElement = null;
+      this.isFallbackMode = false;
 
       this.updateState({
         isConnected: false,
@@ -537,13 +725,17 @@ export class AzureTTSAvatarSDK extends EventTarget {
 
   public isReady(): boolean {
     return this.state.isConnected && 
-           this.avatarSynthesizer !== null && 
+           (this.avatarSynthesizer !== null || this.speechSynthesizer !== null || this.isFallbackMode) && 
            !this.state.isConnecting &&
            !this.state.error;
   }
 
   public getState(): AvatarState {
     return { ...this.state };
+  }
+
+  public isInFallbackMode(): boolean {
+    return this.isFallbackMode;
   }
 
   // Event handler methods for backward compatibility
@@ -604,6 +796,10 @@ export class AzureTTSAvatarSDK extends EventTarget {
       'en-US-SteffanNeural',
       'en-US-TonyNeural'
     ];
+  }
+  
+  public static getSupportedRegions(): string[] {
+    return AVATAR_SUPPORTED_REGIONS;
   }
 }
 
