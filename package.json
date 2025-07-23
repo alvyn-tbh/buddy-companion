@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:clean": "node fix-hmr.js && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "queue:worker": "tsx lib/queue/worker.ts",
-    "queue:monitor": "tsx lib/queue/monitor.ts"
+    "queue:monitor": "tsx lib/queue/monitor.ts",
+    "fix-hmr": "node fix-hmr.js",
+    "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
     "@ai-sdk/deepinfra": "^0.2.17",
