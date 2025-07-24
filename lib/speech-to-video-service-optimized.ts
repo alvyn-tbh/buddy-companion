@@ -237,21 +237,30 @@ export class SpeechToVideoServiceOptimized extends EventTarget {
   }
 
   public startListening(): void {
-    if (!this.recognition || !this.currentState.isActive) {
-      this.emitError('Service not ready for listening');
+    if (!this.recognition) {
+      this.emitError('Speech recognition not initialized');
       return;
     }
-
+    if (!this.currentState.isActive) {
+      console.warn('⚠️ [SpeechToVideoOptimized] Service not active, ignoring startListening call');
+      return;
+    }
     if (this.currentState.isListening) {
+      console.warn('⚠️ [SpeechToVideoOptimized] Already listening, ignoring startListening call');
       return;
     }
 
     try {
+      console.log('🎤 [SpeechToVideoOptimized] Starting speech recognition...');
       this.recognition.start();
       this.updateState({ transcript: '' });
     } catch (error) {
-      console.error('Failed to start listening:', error);
-      // Ignore if already started
+      if (error instanceof DOMException && error.name === 'InvalidStateError') {
+        console.warn('⚠️ [SpeechToVideoOptimized] Ignored InvalidStateError: recognition has already started.');
+      } else {
+        console.error('❌ [SpeechToVideoOptimized] Failed to start listening:', error);
+        this.emitError('Failed to start speech recognition');
+      }
     }
   }
 

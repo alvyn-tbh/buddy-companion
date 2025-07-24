@@ -1,5 +1,8 @@
 'use client';
 
+// CRITICAL: Apply WebRTC compatibility BEFORE any Speech SDK code loads
+import '@/lib/webrtc-compatibility';
+
 import { EventEmitter } from 'events';
 
 // Avatar character and style options
@@ -172,6 +175,11 @@ export class AzureAvatarService extends EventEmitter {
     try {
       this.videoElement = videoElement;
 
+      // Validate required config
+      if (!this.config.avatarCharacter) {
+        throw new Error('avatarCharacter is required in AvatarServiceConfig');
+      }
+
       // Load Speech SDK
       await this.loadSpeechSDK();
 
@@ -183,9 +191,10 @@ export class AzureAvatarService extends EventEmitter {
       );
 
       // Configure avatar
-      this.avatarConfig = new SpeechSDK.AvatarConfig();
-      this.avatarConfig.character = this.config.avatarCharacter || 'lisa';
-      this.avatarConfig.style = this.config.avatarStyle || 'casual-sitting';
+      this.avatarConfig = new SpeechSDK.AvatarConfig(
+        this.config.avatarCharacter,
+        this.config.avatarStyle || 'casual-sitting'
+      );
       
       if (this.config.voice) {
         this.speechConfig.speechSynthesisVoiceName = this.config.voice;
