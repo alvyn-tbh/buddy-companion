@@ -33,7 +33,7 @@ export function applyWebRTCPolyfill(): void {
 
     private _getConfiguration(): RTCConfiguration {
       // Try to use the native method if it exists
-      if (super.getConfiguration) {
+      if (typeof super.getConfiguration === 'function') {
         try {
           return super.getConfiguration();
         } catch (e) {
@@ -55,7 +55,7 @@ export function applyWebRTCPolyfill(): void {
     // Override setConfiguration to update our stored config
     setConfiguration(configuration: RTCConfiguration): void {
       this._configuration = { ...this._configuration, ...configuration };
-      if (super.setConfiguration) {
+      if (typeof super.setConfiguration === 'function') {
         super.setConfiguration(configuration);
       }
     }
@@ -72,13 +72,14 @@ export function applyWebRTCPolyfill(): void {
         }
       } catch (e) {
         // Some properties might not be accessible
+        console.error('❌ Error defining property', prop, e);
       }
     }
   }
 
   // Replace the global RTCPeerConnection
-  window.RTCPeerConnection = PolyfillRTCPeerConnection as any;
-
+  (window as Window & { RTCPeerConnection: typeof RTCPeerConnection }).RTCPeerConnection = PolyfillRTCPeerConnection as unknown as typeof RTCPeerConnection;
+  console.log('✅ RTCPeerConnection polyfill applied successfully');
   // Also add getConfiguration to the prototype as a fallback
   if (!OriginalRTCPeerConnection.prototype.getConfiguration) {
     OriginalRTCPeerConnection.prototype.getConfiguration = function() {

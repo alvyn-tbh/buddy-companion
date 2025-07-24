@@ -84,15 +84,17 @@ export function ensureWebRTCCompatibility(): void {
     for (const prop of Object.getOwnPropertyNames(OriginalRTCPeerConnection)) {
       if (prop !== 'prototype' && prop !== 'length' && prop !== 'name') {
         try {
-          (PatchedRTCPeerConnection as any)[prop] = (OriginalRTCPeerConnection as any)[prop];
-        } catch (e) {
-          // Some properties might be read-only
+          (PatchedRTCPeerConnection as unknown as Record<string, unknown>)[prop] = 
+            (OriginalRTCPeerConnection as unknown as Record<string, unknown>)[prop];
+        } catch {
+          // Some properties might be read-only, ignore silently
         }
       }
     }
     
     // Replace the global constructor
-    (window as any).RTCPeerConnection = PatchedRTCPeerConnection;
+    (window as Window & { RTCPeerConnection: typeof RTCPeerConnection }).RTCPeerConnection = 
+      PatchedRTCPeerConnection as unknown as typeof OriginalRTCPeerConnection;
     
     // Also patch the prototype directly as a fallback
     if (!OriginalRTCPeerConnection.prototype.getConfiguration) {
@@ -145,8 +147,8 @@ if (typeof window !== 'undefined') {
   
   // Monitor for Speech SDK loading
   const originalAppendChild = document.head.appendChild;
-  document.head.appendChild = function(node: Node) {
-    const result = originalAppendChild.call(this, node);
+  document.head.appendChild = function<T extends Node>(node: T): T {
+    const result = originalAppendChild.call(this, node) as T;
     
     // If it's a script tag loading the Speech SDK, ensure compatibility after it loads
     if (node instanceof HTMLScriptElement && 
