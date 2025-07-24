@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 
-// Declare global window types
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SpeechSDK: any;
-  }
-}
+// Global window types are declared in azure-avatar-service.ts
 
 export default function TestAvatarPage() {
   const [status, setStatus] = useState('Not started');
@@ -41,7 +35,9 @@ export default function TestAvatarPage() {
       script.onload = () => {
         addLog('✅ Speech SDK loaded successfully');
         if (window.SpeechSDK) {
-          addLog(`SDK Version: ${window.SpeechSDK.SDK_VERSION || 'Unknown'}`);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sdkAny = window.SpeechSDK as any;
+          addLog(`SDK Version: ${sdkAny.SDK_VERSION || 'Unknown'}`);
           addLog(`Available APIs: ${Object.keys(window.SpeechSDK).join(', ')}`);
         }
         resolve();

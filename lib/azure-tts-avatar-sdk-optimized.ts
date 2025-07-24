@@ -10,10 +10,9 @@
  * - Lazy avatar connection with immediate TTS availability
  */
 
+// Global types are declared in azure-avatar-service.ts
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SpeechSDK: any;
     AzureSDKPreloaded?: boolean;
   }
 }

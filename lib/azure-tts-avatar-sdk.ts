@@ -15,13 +15,7 @@
  * - West US 2
  */
 
-// Import Speech SDK dynamically for client-side usage
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SpeechSDK: any;
-  }
-}
+// Global types are declared in azure-avatar-service.ts
 
 export interface AvatarConfig {
   speechKey: string;
@@ -52,7 +46,9 @@ const AVATAR_SUPPORTED_REGIONS = [
   'westus2'
 ];
 
-export class AzureTTSAvatarSDK extends EventTarget {
+import { EventEmitter } from 'events';
+
+export class AzureTTSAvatarSDK extends EventEmitter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private speechConfig: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,9 +81,10 @@ export class AzureTTSAvatarSDK extends EventTarget {
     }
   }
 
+  // Override emit to provide backward compatibility
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private emit(event: string, data?: any) {
-    this.dispatchEvent(new CustomEvent(event, { detail: data }));
+  emit(event: string, ...args: any[]): boolean {
+    return super.emit(event, ...args);
   }
 
   private updateState(updates: Partial<AvatarState>) {
@@ -738,16 +735,18 @@ export class AzureTTSAvatarSDK extends EventTarget {
     return this.isFallbackMode;
   }
 
-  // Event handler methods for backward compatibility
+  // Override on method to match EventEmitter signature
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public on(event: string, handler: (data?: any) => void): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.addEventListener(event, (e: any) => handler(e.detail));
+  on(eventName: string | symbol, listener: (...args: any[]) => void): this {
+    super.on(eventName, listener);
+    return this;
   }
 
+  // Override off method to match EventEmitter signature
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public off(event: string, handler: (data?: any) => void): void {
-    this.removeEventListener(event, handler);
+  off(eventName: string | symbol, listener: (...args: any[]) => void): this {
+    super.off(eventName, listener);
+    return this;
   }
 
   // Static methods for getting available options

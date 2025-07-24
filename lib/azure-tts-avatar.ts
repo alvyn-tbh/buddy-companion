@@ -1,11 +1,6 @@
 import { EventEmitter } from 'events';
 
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    SpeechSDK: any;
-  }
-}
+// Global types are declared in azure-avatar-service.ts
 
 interface AvatarConfig {
   speechKey: string;
@@ -68,23 +63,29 @@ export class AzureTTSAvatar extends EventEmitter {
         this.avatarConfig.speechRegion
       );
 
-      speechConfig.speechSynthesisVoiceName = this.avatarConfig.voice;
+      if (this.avatarConfig.voice) {
+        speechConfig.speechSynthesisVoiceName = this.avatarConfig.voice;
+      }
       
-      // Enable detailed logging
-      speechConfig.enableAudioLogging = true;
-      speechConfig.requestSnr = true;
+      // Enable detailed logging if available
+      // These properties might not exist in the type definition
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const configAny = speechConfig as any;
+      configAny.enableAudioLogging = true;
+      configAny.requestSnr = true;
 
       console.log('👤 Creating avatar configuration...');
       // Configure avatar
       const avatarConfig = new window.SpeechSDK.AvatarConfig(
-        this.avatarConfig.avatarCharacter,
-        this.avatarConfig.avatarStyle
+        this.avatarConfig.avatarCharacter || 'lisa',
+        this.avatarConfig.avatarStyle || 'casual-sitting'
       );
 
       // Set video format with more specific configuration
       const videoFormat = new window.SpeechSDK.AvatarVideoFormat();
       videoFormat.bitrate = 2000000; // 2 Mbps
-      avatarConfig.videoFormat = videoFormat;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (avatarConfig as any).videoFormat = videoFormat;
 
       console.log('🔧 Creating avatar synthesizer...');
       console.log('Avatar config:', {

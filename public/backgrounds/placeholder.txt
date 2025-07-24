@@ -1,0 +1,8 @@
+This directory should contain background images for avatars:
+
+- office.jpg - Professional office environment
+- studio.jpg - Recording studio background
+- home.jpg - Cozy home setting
+- nature.jpg - Natural outdoor scene
+
+These images should be optimized for web use (compressed JPEGs, around 1920x1080).
