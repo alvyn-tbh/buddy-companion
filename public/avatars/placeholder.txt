@@ -1,8 +1,0 @@
-This directory should contain avatar preview images:
-
-- lisa.png - Lisa avatar preview (256x256)
-- michael.png - Michael avatar preview (256x256)
-- sam.png - Sam avatar preview (256x256)
-- kate.png - Kate avatar preview (256x256)
-
-These images should be PNG format with transparent backgrounds.
