@@ -21,9 +21,15 @@ export default function TestAvatarPage() {
   };
 
   const loadSpeechSDK = async () => {
+    // Ensure WebRTC polyfill is applied before loading SDK
+    const { applyWebRTCPolyfill } = await import('@/lib/webrtc-polyfill');
+    applyWebRTCPolyfill();
+    
     return new Promise<void>((resolve, reject) => {
       if (window.SpeechSDK) {
         addLog('✅ Speech SDK already loaded');
+        // Re-apply polyfill in case SDK was loaded elsewhere
+        applyWebRTCPolyfill();
         resolve();
         return;
       }
@@ -34,6 +40,9 @@ export default function TestAvatarPage() {
 
       script.onload = () => {
         addLog('✅ Speech SDK loaded successfully');
+        // Re-apply WebRTC polyfill after SDK loads
+        applyWebRTCPolyfill();
+        
         if (window.SpeechSDK) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const sdkAny = window.SpeechSDK as any;
