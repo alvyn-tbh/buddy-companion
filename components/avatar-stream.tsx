@@ -23,6 +23,23 @@ import {
 import { toast } from 'sonner';
 import { Label } from './ui/label';
 
+// Simple WebRTC availability test (compatibility handled by dedicated utility)
+function checkWebRTCSupport(): { supported: boolean; error?: string } {
+  if (typeof RTCPeerConnection === 'undefined') {
+    return { supported: false, error: 'RTCPeerConnection is not supported' };
+  }
+
+  try {
+    const testConnection = new RTCPeerConnection();
+    testConnection.close();
+    return { supported: true };
+  } catch (error) {
+    console.error('❌ WebRTC support test failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { supported: false, error: `WebRTC test failed: ${errorMessage}` };
+  }
+}
+
 interface AvatarStreamProps {
   avatarService: AzureAvatarService;
   onStreamReady?: (stream: MediaStream) => void;
@@ -69,9 +86,17 @@ export function AvatarStream({
   });
   const [currentEmotion, setCurrentEmotion] = useState<keyof typeof AVATAR_EMOTIONS>('neutral');
   const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor'>('good');
+  const [webRTCSupport, setWebRTCSupport] = useState<{ supported: boolean; error?: string }>({ supported: true });
 
   // Monitor avatar state changes
   useEffect(() => {
+    // Check for WebRTC support on mount
+    const support = checkWebRTCSupport();
+    setWebRTCSupport(support);
+    if (!support.supported) {
+      toast.error(`WebRTC Error: ${support.error}`);
+    }
+  
     const handleStateChange = (state: AvatarState) => {
       setAvatarState(state);
       setCurrentEmotion(state.currentEmotion);
@@ -218,6 +243,20 @@ export function AvatarStream({
       stopStream();
     };
   }, [stopStream]);
+
+  if (!webRTCSupport.supported) {
+    return (
+      <Card className="p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>WebRTC Not Supported:</strong> {webRTCSupport.error}
+            <p className="mt-2 text-xs">Please try a different browser or check your browser settings.</p>
+          </AlertDescription>
+        </Alert>
+      </Card>
+    );
+  }
 
   return (
     <div className={cn('space-y-4', className)}>
