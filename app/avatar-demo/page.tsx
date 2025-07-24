@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import {
   Settings,
   Video,
@@ -22,6 +23,8 @@ import {
 } from 'lucide-react';
 
 export default function AvatarDemoPage() {
+  const isClient = useIsClient();
+
   // Avatar configuration state
   const [selectedCharacter, setSelectedCharacter] = useState<keyof typeof AVATAR_CHARACTERS>('lisa');
   const [selectedStyle, setSelectedStyle] = useState('casual-sitting');
@@ -107,6 +110,17 @@ export default function AvatarDemoPage() {
     }
   };
 
+  // Return a loading state or null on the server
+  if (!isClient) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+        <p className="mt-4 text-gray-500">Loading Avatar Demo...</p>
+      </div>
+    );
+  }
+
+  // Return the full component only on the client
   return (
     <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
@@ -120,7 +134,7 @@ export default function AvatarDemoPage() {
       </div>
 
       {/* Environment Check */}
-      {(!process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || !process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION) && (
+      {isClient && (!process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || !process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION) && (
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -267,7 +281,7 @@ export default function AvatarDemoPage() {
         </TabsContent>
 
         <TabsContent value="stream" className="space-y-6">
-          {isServiceInitialized && avatarServiceRef.current ? (
+          {isClient && isServiceInitialized && avatarServiceRef.current ? (
             <div className="max-w-4xl mx-auto">
               <AvatarStream
                 avatarService={avatarServiceRef.current}
@@ -297,7 +311,7 @@ export default function AvatarDemoPage() {
         </TabsContent>
 
         <TabsContent value="interact" className="space-y-6">
-          {isServiceInitialized && avatarServiceRef.current ? (
+          {isClient && isServiceInitialized && avatarServiceRef.current ? (
             <div className="max-w-4xl mx-auto space-y-6">
               {/* Text to Speech */}
               <Card className="p-6">
