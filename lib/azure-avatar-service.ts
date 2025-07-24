@@ -1,7 +1,7 @@
 'use client';
 
-// CRITICAL: Apply WebRTC compatibility BEFORE any Speech SDK code loads
-import '@/lib/webrtc-compatibility';
+// CRITICAL: Apply WebRTC polyfill BEFORE any Speech SDK code loads
+import '@/lib/webrtc-polyfill';
 
 import { EventEmitter } from 'events';
 
@@ -225,13 +225,21 @@ export class AzureAvatarService extends EventEmitter {
   private async loadSpeechSDK(): Promise<void> {
     if (window.SpeechSDK) return;
 
+    // Ensure WebRTC polyfill is applied before loading SDK
+    const { applyWebRTCPolyfill } = await import('@/lib/webrtc-polyfill');
+    applyWebRTCPolyfill();
+
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://aka.ms/csspeech/jsbrowserpackageraw';
       script.async = true;
 
       script.onload = () => {
+        // Re-apply WebRTC polyfill after SDK loads
+        applyWebRTCPolyfill();
+        
         if (window.SpeechSDK) {
+          console.log('✅ Speech SDK loaded successfully');
           resolve();
         } else {
           reject(new Error('Speech SDK loaded but not available'));

@@ -123,6 +123,10 @@ export class AzureTTSAvatarSDK extends EventEmitter {
       return;
     }
 
+    // Ensure WebRTC polyfill is applied before loading SDK
+    const { applyWebRTCPolyfill } = await import('@/lib/webrtc-polyfill');
+    applyWebRTCPolyfill();
+
     console.log('🔄 [Azure Avatar SDK] Loading Azure Speech SDK...');
     this.updateState({ connectionStatus: 'Loading Speech SDK...' });
 
@@ -140,6 +144,8 @@ export class AzureTTSAvatarSDK extends EventEmitter {
         clearTimeout(loadTimeout);
         this.isSDKLoaded = true;
         console.log('✅ [Azure Avatar SDK] Speech SDK already available');
+        // Re-apply WebRTC polyfill
+        applyWebRTCPolyfill();
         this.checkAvatarSupport();
         resolve();
         return;
@@ -173,6 +179,9 @@ export class AzureTTSAvatarSDK extends EventEmitter {
         script.onload = () => {
           clearTimeout(loadTimeout);
           console.log(`✅ [Azure Avatar SDK] Speech SDK loaded from: ${sdkUrls[currentUrlIndex]}`);
+          
+          // Re-apply WebRTC polyfill after SDK loads
+          applyWebRTCPolyfill();
           
           // Log available SDK features
           if (window.SpeechSDK) {

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from '@/lib/hooks/use-auth';
 import { StagewiseToolbar } from '@stagewise/toolbar-next';
 import ReactPlugin from '@stagewise-plugins/react';
+import { WebRTCPolyfillLoader } from '@/components/webrtc-polyfill-loader';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
+        <WebRTCPolyfillLoader />
         <AuthProvider>
           {children}
         </AuthProvider>
