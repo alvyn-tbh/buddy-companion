@@ -72,7 +72,7 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          // Add CORS headers for Azure Speech SDK
+          // Add CORS headers for HeyGen and WebRTC
           {
             key: 'Access-Control-Allow-Origin',
             value: '*',
@@ -83,18 +83,18 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'X-Requested-With, Content-Type, Authorization',
+            value: 'X-Requested-With, Content-Type, Authorization, x-api-key',
           },
         ],
       },
-      // Add specific CORS configuration for Azure Speech SDK endpoints
+      // Add specific CORS configuration for HeyGen API endpoints
       {
         source: '/:path*',
         has: [
           {
             type: 'header',
             key: 'origin',
-            value: '(?:https://.*\\.cognitiveservices\\.azure\\.com|https://.*\\.blob\\.core\\.windows\\.net|https://aka\\.ms).*',
+            value: '(?:https://.*\\.heygen\\.com|https://api\\.heygen\\.com).*',
           },
         ],
         headers: [

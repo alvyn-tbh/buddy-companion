@@ -18,7 +18,7 @@
 ## Features
 
 - **🎤 Real-time Speech-to-Speech Communication** - WebRTC-powered voice mode for natural conversations
-- **🎬 Speech-to-Video Avatar** - Azure Text-to-Speech Avatar integration for lifelike video responses
+- **🎬 Speech-to-Video Avatar** - HeyGen Interactive Avatar integration for lifelike video responses
 - **🤖 Advanced AI Integration** - Powered by OpenAI GPT models with streaming responses
 - **🔊 High-Quality TTS** - OpenAI TTS with multiple voices and quality options
 - **📝 Text Chat Interface** - Traditional chat with markdown support and streaming responses
@@ -26,6 +26,7 @@
 - **⚡ Performance Optimized** - Built with the latest [Next.js](https://nextjs.org) App Router
 - **🔧 Extensible Architecture** - Easy to add new AI providers and features
 - **🔐 Conditional Authentication** - Optional user authentication for testing and development
+- **⚡ Optimized Latency** - Pre-warmed connections, response caching, and WebRTC optimizations
 
 ## Voice Mode
 
@@ -52,35 +53,34 @@ Experience natural voice conversations with the AI assistant using our advanced 
 
 ## Speech-to-Video Avatar
 
-### Azure Text-to-Speech Avatar Integration
-Transform your AI conversations with lifelike video avatars:
+### HeyGen Interactive Avatar Integration
+Transform your AI conversations with lifelike interactive avatars:
 
-- **🎭 Realistic Avatars** - Multiple characters with natural expressions and lip-sync
-- **🔄 Continuous Conversation** - Automatic speech recognition and response loop
-- **🎤 Voice Input** - Speak naturally and get video responses
+- **🎭 Realistic Avatars** - Interactive characters with natural expressions and real-time lip-sync
+- **🔄 Real-time Streaming** - WebRTC-powered low-latency video streaming
+- **🎤 Voice Input** - Speak naturally and get real-time video responses
 - **🧠 AI Processing** - GPT-4 powered responses with context awareness
-- **⚡ Real-time Synthesis** - Fast avatar video generation
-- **🎨 Customizable** - Choose from different avatars, styles, and voices
+- **⚡ Optimized Performance** - Pre-warmed connections and response caching
+- **🎨 Customizable** - Multiple avatars and voice options available
 
-### Available Avatars
-- **lisa** - Professional female avatar (default)
-- **jenny** - Friendly female avatar
-- **jason** - Business male avatar
-- **aria** - Energetic female avatar
-- **guy** - Casual male avatar
-- **emma** - Warm female avatar
+### Key Features
+- **Low Latency** - Optimized WebRTC connections for minimal delay
+- **Response Caching** - Intelligent caching for frequently asked questions
+- **Connection Pooling** - Pre-warmed connections for instant avatar availability
+- **Voice Activity Detection** - Smart speech recognition with noise suppression
 
-### Setup Speech-to-Video
-1. Create an Azure Speech Service resource (Standard S0 tier)
-2. Get your API key and region from Azure Portal
+### Setup HeyGen Avatar
+1. Create a HeyGen account at [heygen.com](https://heygen.com)
+2. Get your API key from the HeyGen dashboard
 3. Add to your `.env.local`:
    ```
-   NEXT_PUBLIC_AZURE_SPEECH_KEY=your_key_here
-   NEXT_PUBLIC_AZURE_SPEECH_REGION=your_region_here
+   HEYGEN_API_KEY=your_heygen_api_key_here
+   NEXT_PUBLIC_HEYGEN_API_KEY=your_heygen_api_key_here
    ```
-4. Navigate to `/speech-to-video-demo` to try it out
+4. Navigate to `/corporate/chat` and toggle to Avatar mode
 
-For detailed setup instructions, see [Azure TTS Avatar Setup Guide](docs/AZURE_TTS_AVATAR_SETUP.md)
+### Available Avatars
+Visit [labs.heygen.com/interactive-avatar](https://labs.heygen.com/interactive-avatar) to explore available avatars and get their IDs.
 
 ## Deploy Your Own
 
