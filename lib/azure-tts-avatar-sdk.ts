@@ -1,5 +1,8 @@
 'use client';
 
+// CRITICAL: Apply WebRTC compatibility BEFORE any Speech SDK code loads
+import '@/lib/webrtc-compatibility';
+
 /**
  * Azure Text-to-Speech Avatar Service
  * Based on Microsoft Azure Speech SDK documentation:
@@ -93,59 +96,98 @@ export class AzureTTSAvatarSDK extends EventEmitter {
   }
 
   private async validateAzureCredentials(): Promise<void> {
-    // Based on Azure troubleshooting guide: validate credentials
-    try {
-      const response = await fetch(`https://${this.config.speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': this.config.speechKey,
-          'Content-type': 'application/x-www-form-urlencoded',
-          'Content-Length': '0'
-        }
-      });
+    // Based on Azure troubleshooting guide: validate credentials with enhanced error handling
+    console.log('🔐 [Azure Avatar SDK] Starting credential validation...');
+    
+    const maxRetries = 2;
+    let lastError: Error | null = null;
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Invalid Azure Speech credentials - check your subscription key and region');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔍 [Azure Avatar SDK] Credential validation attempt ${attempt}/${maxRetries}...`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per attempt
+
+        const response = await fetch(`https://${this.config.speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': this.config.speechKey,
+            'Content-type': 'application/x-www-form-urlencoded',
+            'Content-Length': '0'
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Invalid Azure Speech subscription key - please check your key');
+          }
+          if (response.status === 403) {
+            throw new Error('Azure Speech service access denied - check your subscription and region');
+          }
+          if (response.status === 404) {
+            throw new Error(`Invalid Azure Speech region '${this.config.speechRegion}' - please check your region`);
+          }
+          if (response.status >= 500) {
+            // Server error - might be temporary, allow retry
+            throw new Error(`Azure Speech Service temporarily unavailable (${response.status})`);
+          }
+          throw new Error(`Azure Speech Service error: ${response.status} ${response.statusText}`);
         }
-        throw new Error(`Azure Speech Service error: ${response.status} ${response.statusText}`);
+
+        console.log('✅ [Azure Avatar SDK] Credentials validated successfully');
+        return; // Success - exit retry loop
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`⚠️ [Azure Avatar SDK] Credential validation attempt ${attempt} failed:`, lastError.message);
+        
+        // Don't retry for certain errors
+        if (lastError.message.includes('Invalid Azure Speech subscription key') ||
+            lastError.message.includes('Invalid Azure Speech region') ||
+            lastError.message.includes('access denied')) {
+          break; // Don't retry authentication/authorization errors
+        }
+
+        // Wait before retry (except on last attempt)
+        if (attempt < maxRetries) {
+          const retryDelay = attempt * 1000; // Exponential backoff: 1s, 2s
+          console.log(`⏳ [Azure Avatar SDK] Retrying credential validation in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
       }
-
-      console.log('✅ [Azure Avatar SDK] Credentials validated successfully');
-    } catch (error) {
-      console.error('❌ [Azure Avatar SDK] Credential validation failed:', error);
-      throw new Error(`Azure credential validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+
+    // If we get here, all retries failed
+    console.error('❌ [Azure Avatar SDK] Credential validation failed after all retries:', lastError?.message);
+    throw new Error(`Azure credential validation failed: ${lastError?.message || 'Unknown error'}`);
   }
 
   private async loadSpeechSDK(): Promise<void> {
     if (this.isSDKLoaded && window.SpeechSDK) {
+      console.log('📦 [Azure Avatar SDK] Speech SDK already loaded');
       return;
     }
 
-    // Ensure WebRTC polyfill is applied before loading SDK
-    const { applyWebRTCPolyfill } = await import('@/lib/webrtc-polyfill');
-    applyWebRTCPolyfill();
-
+    // WebRTC compatibility is already applied via the import at the top of this file
     console.log('🔄 [Azure Avatar SDK] Loading Azure Speech SDK...');
-    this.updateState({ connectionStatus: 'Loading Speech SDK...' });
 
     return new Promise((resolve, reject) => {
-      // Set a timeout for SDK loading
+      // Set a more reasonable timeout for SDK loading
       const loadTimeout = setTimeout(() => {
-        const error = 'Azure Speech SDK loading timeout (10s)';
+        const error = 'Azure Speech SDK loading timeout (12s) - this may indicate network issues or firewall blocking';
         console.error('❌ [Azure Avatar SDK]', error);
-        this.updateState({ error, connectionStatus: 'SDK Load Timeout' });
         reject(new Error(error));
-      }, 10000); // 10 second timeout
+      }, 12000); // 12 second timeout
 
-      // Check if SDK is already loaded
+      // Check if SDK is already loaded (race condition protection)
       if (window.SpeechSDK) {
         clearTimeout(loadTimeout);
         this.isSDKLoaded = true;
-        console.log('✅ [Azure Avatar SDK] Speech SDK already available');
-        // Re-apply WebRTC polyfill
-        applyWebRTCPolyfill();
+        console.log('✅ [Azure Avatar SDK] Speech SDK already available (race condition avoided)');
         this.checkAvatarSupport();
         resolve();
         return;
@@ -153,38 +195,53 @@ export class AzureTTSAvatarSDK extends EventEmitter {
 
       // Create script element for Speech SDK with multiple fallback URLs
       const sdkUrls = [
-        // Use specific version that includes Avatar support
+        // Primary CDN with latest version
         'https://aka.ms/csspeech/jsbrowserpackageraw',
+        // Fallback CDNs with specific versions
         'https://csspeechstorage.blob.core.windows.net/drop/1.36.0/microsoft.cognitiveservices.speech.sdk.bundle-min.js',
         'https://csspeechstorage.blob.core.windows.net/drop/1.35.0/microsoft.cognitiveservices.speech.sdk.bundle-min.js',
         'https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle.js'
       ];
 
       let currentUrlIndex = 0;
+      let lastError: Error | null = null;
 
       const tryLoadSDK = () => {
         if (currentUrlIndex >= sdkUrls.length) {
           clearTimeout(loadTimeout);
-          const error = 'Failed to load Azure Speech SDK from all sources';
+          const error = `Failed to load Azure Speech SDK from all ${sdkUrls.length} sources. Last error: ${lastError?.message || 'Unknown'}`;
           console.error('❌ [Azure Avatar SDK]', error);
-          this.updateState({ error, connectionStatus: 'SDK Load Failed' });
+          console.log('🔗 [Azure Avatar SDK] Attempted URLs:', sdkUrls);
           reject(new Error(error));
           return;
         }
 
+        const currentUrl = sdkUrls[currentUrlIndex];
+        console.log(`📡 [Azure Avatar SDK] Attempting to load SDK from: ${currentUrl} (${currentUrlIndex + 1}/${sdkUrls.length})`);
+
         const script = document.createElement('script');
-        script.src = sdkUrls[currentUrlIndex];
+        script.src = currentUrl;
         script.async = true;
         
+        // Set a per-script timeout
+        const scriptTimeout = setTimeout(() => {
+          lastError = new Error(`Timeout loading from ${currentUrl}`);
+          console.warn(`⏰ [Azure Avatar SDK] Timeout loading from: ${currentUrl}`);
+          if (script.parentNode) {
+            document.head.removeChild(script);
+          }
+          currentUrlIndex++;
+          setTimeout(tryLoadSDK, 100); // Small delay before trying next URL
+        }, 8000); // 8 seconds per script
+        
         script.onload = () => {
+          clearTimeout(scriptTimeout);
           clearTimeout(loadTimeout);
-          console.log(`✅ [Azure Avatar SDK] Speech SDK loaded from: ${sdkUrls[currentUrlIndex]}`);
           
-          // Re-apply WebRTC polyfill after SDK loads
-          applyWebRTCPolyfill();
-          
-          // Log available SDK features
           if (window.SpeechSDK) {
+            console.log(`✅ [Azure Avatar SDK] Speech SDK loaded successfully from: ${currentUrl}`);
+            
+            // Log available SDK features for debugging
             console.log('📦 [Azure Avatar SDK] Available SDK features:', {
               SpeechConfig: !!window.SpeechSDK.SpeechConfig,
               SpeechSynthesizer: !!window.SpeechSDK.SpeechSynthesizer,
@@ -195,22 +252,41 @@ export class AzureTTSAvatarSDK extends EventEmitter {
             });
             
             this.checkAvatarSupport();
+            this.isSDKLoaded = true;
+            resolve();
+          } else {
+            lastError = new Error(`SDK script loaded but SpeechSDK not available from ${currentUrl}`);
+            console.error('❌ [Azure Avatar SDK] SDK script loaded but SpeechSDK not available:', lastError.message);
+            currentUrlIndex++;
+            setTimeout(tryLoadSDK, 100);
           }
-          
-          this.isSDKLoaded = true;
-          resolve();
         };
 
-        script.onerror = () => {
-          console.warn(`⚠️ [Azure Avatar SDK] Failed to load SDK from: ${sdkUrls[currentUrlIndex]}`);
-          document.head.removeChild(script);
+        script.onerror = (event) => {
+          clearTimeout(scriptTimeout);
+          lastError = new Error(`Failed to load script from ${currentUrl}: ${event}`);
+          console.warn(`⚠️ [Azure Avatar SDK] Failed to load SDK from: ${currentUrl}`, event);
+          
+          if (script.parentNode) {
+            document.head.removeChild(script);
+          }
           currentUrlIndex++;
           setTimeout(tryLoadSDK, 100); // Small delay before trying next URL
         };
 
-        document.head.appendChild(script);
+        // Add script to document
+        try {
+          document.head.appendChild(script);
+        } catch (appendError) {
+          clearTimeout(scriptTimeout);
+          lastError = new Error(`Failed to append script element: ${appendError}`);
+          console.error('❌ [Azure Avatar SDK] Failed to append script element:', appendError);
+          currentUrlIndex++;
+          setTimeout(tryLoadSDK, 100);
+        }
       };
 
+      // Start loading process
       tryLoadSDK();
     });
   }
@@ -229,32 +305,80 @@ export class AzureTTSAvatarSDK extends EventEmitter {
   }
 
   public async initialize(videoElement: HTMLVideoElement): Promise<void> {
+    const INITIALIZATION_TIMEOUT = 30000; // 30 seconds total timeout
+    const abortController = new AbortController();
+    
+    // Set up overall initialization timeout
+    const initTimeout = setTimeout(() => {
+      abortController.abort();
+    }, INITIALIZATION_TIMEOUT);
+
     try {
-      console.log('🎬 [Azure Avatar SDK] Initializing avatar...');
+      console.log('🎬 [Azure Avatar SDK] Starting avatar initialization...');
       this.updateState({ 
         isConnecting: true, 
         error: null,
-        connectionStatus: 'Initializing...'
+        connectionStatus: 'Starting initialization...'
       });
 
       this.videoElement = videoElement;
 
-      // Try to load Azure Speech SDK with timeout
+      // Phase 0: Run pre-initialization diagnostics
+      console.log('🔍 [Azure Avatar SDK] Phase 0: Running diagnostics...');
+      const diagnostics = await this.runPreInitializationDiagnostics();
+      
+      if (!diagnostics.canProceed) {
+        console.error('❌ [Azure Avatar SDK] Critical issues found, cannot proceed:', diagnostics.issues);
+        clearTimeout(initTimeout);
+        this.updateState({
+          error: `System requirements not met: ${diagnostics.issues.join(', ')}`,
+          isConnecting: false,
+          connectionStatus: 'System Requirements Not Met'
+        });
+        throw new Error(`Cannot initialize avatar: ${diagnostics.issues.join(', ')}`);
+      }
+
+      if (diagnostics.issues.length > 0) {
+        console.warn('⚠️ [Azure Avatar SDK] Minor issues detected, proceeding with caution:', diagnostics.issues);
+        this.updateState({ connectionStatus: 'Proceeding with minor issues detected...' });
+      }
+      
+      console.log('✅ [Azure Avatar SDK] Phase 0 completed: Diagnostics passed');
+
+      // Phase 1: Load Azure Speech SDK with enhanced timeout
+      console.log('📦 [Azure Avatar SDK] Phase 1: Loading Speech SDK...');
+      this.updateState({ connectionStatus: 'Loading Speech SDK...' });
+      
       try {
         await Promise.race([
           this.loadSpeechSDK(),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('SDK loading timeout')), 15000)
-          )
+            setTimeout(() => reject(new Error('SDK loading timeout (15s)')), 15000)
+          ),
+          new Promise((_, reject) => {
+            abortController.signal.addEventListener('abort', () => {
+              reject(new Error('Initialization aborted'));
+            });
+          })
         ]);
+        console.log('✅ [Azure Avatar SDK] Phase 1 completed: SDK loaded');
       } catch (sdkError) {
-        console.warn('⚠️ [Azure Avatar SDK] SDK loading failed, using fallback mode:', sdkError);
-        // Use fallback mode without full Azure SDK
+        console.warn('⚠️ [Azure Avatar SDK] Phase 1 failed, using fallback mode:', sdkError);
+        clearTimeout(initTimeout);
         this.initializeFallbackMode();
         return;
       }
 
-      // Enhanced credential validation based on Azure troubleshooting guide
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        throw new Error('Initialization was aborted');
+      }
+
+      // Phase 2: Validate credentials with timeout
+      console.log('🔑 [Azure Avatar SDK] Phase 2: Validating credentials...');
+      this.updateState({ connectionStatus: 'Validating Azure credentials...' });
+
+      // Enhanced credential validation with early checks
       if (!this.config.speechKey || this.config.speechKey.length < 32) {
         throw new Error('Invalid Azure Speech Key - must be at least 32 characters');
       }
@@ -263,14 +387,36 @@ export class AzureTTSAvatarSDK extends EventEmitter {
         throw new Error('Invalid Azure Speech Region format');
       }
 
-      // Validate credentials with Azure service
-      this.updateState({ connectionStatus: 'Validating Azure credentials...' });
-      await this.validateAzureCredentials();
+      try {
+        await Promise.race([
+          this.validateAzureCredentials(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Credential validation timeout (10s)')), 10000)
+          ),
+          new Promise((_, reject) => {
+            abortController.signal.addEventListener('abort', () => {
+              reject(new Error('Credential validation aborted'));
+            });
+          })
+        ]);
+        console.log('✅ [Azure Avatar SDK] Phase 2 completed: Credentials validated');
+      } catch (credError) {
+        console.error('❌ [Azure Avatar SDK] Phase 2 failed:', credError);
+        clearTimeout(initTimeout);
+        // Try fallback mode for credential issues
+        this.initializeFallbackMode();
+        return;
+      }
 
-      console.log('🔑 [Azure Avatar SDK] Creating speech config...');
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        throw new Error('Initialization was aborted');
+      }
+
+      // Phase 3: Create speech configuration
+      console.log('🔧 [Azure Avatar SDK] Phase 3: Creating speech configuration...');
       this.updateState({ connectionStatus: 'Creating speech configuration...' });
 
-      // Create speech configuration
       this.speechConfig = window.SpeechSDK.SpeechConfig.fromSubscription(
         this.config.speechKey,
         this.config.speechRegion
@@ -284,26 +430,35 @@ export class AzureTTSAvatarSDK extends EventEmitter {
       }
 
       // Add timeout properties based on Azure troubleshooting guide
-      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000");
-      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000");
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "5000");
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000");
+      this.speechConfig.setProperty(window.SpeechSDK.PropertyId.SpeechServiceConnection_ReceiveTimeoutMs, "10000");
 
-      // Check if Avatar is supported
+      console.log('✅ [Azure Avatar SDK] Phase 3 completed: Speech config created');
+
+      // Phase 4: Check avatar support and create avatar
+      console.log('🎭 [Azure Avatar SDK] Phase 4: Checking avatar support...');
       if (!this.isAvatarSupported) {
         console.warn('⚠️ [Azure Avatar SDK] Avatar API not available, using TTS fallback mode');
+        clearTimeout(initTimeout);
         this.initializeTTSFallbackMode();
         return;
       }
 
-      console.log('🎭 [Azure Avatar SDK] Creating avatar config...');
+      // Phase 5: Create avatar configuration
+      console.log('⚙️ [Azure Avatar SDK] Phase 5: Creating avatar configuration...');
       this.updateState({ connectionStatus: 'Creating avatar configuration...' });
 
-      // Create avatar configuration
-      // Note: The Avatar API might be different in newer SDK versions
-      // Using the approach from Azure samples
       const talkingAvatarCharacter = this.config.avatarCharacter || 'lisa';
       const talkingAvatarStyle = this.config.avatarStyle || 'casual-sitting';
       
-      // Create avatar config
+      // Ensure avatar character and style are not undefined
+      if (!talkingAvatarCharacter) {
+        throw new Error('Avatar character is required but not specified');
+      }
+
+      console.log(`🎯 [Azure Avatar SDK] Using avatar: ${talkingAvatarCharacter} with style: ${talkingAvatarStyle}`);
+      
       this.avatarConfig = new window.SpeechSDK.AvatarConfig(
         talkingAvatarCharacter,
         talkingAvatarStyle
@@ -318,10 +473,12 @@ export class AzureTTSAvatarSDK extends EventEmitter {
         this.avatarConfig.backgroundImage = this.config.backgroundImage;
       }
 
-      console.log('🔗 [Azure Avatar SDK] Creating avatar synthesizer...');
+      console.log('✅ [Azure Avatar SDK] Phase 5 completed: Avatar config created');
+
+      // Phase 6: Create avatar synthesizer
+      console.log('🔗 [Azure Avatar SDK] Phase 6: Creating avatar synthesizer...');
       this.updateState({ connectionStatus: 'Creating avatar synthesizer...' });
 
-      // Create avatar synthesizer
       this.avatarSynthesizer = new window.SpeechSDK.AvatarSynthesizer(
         this.speechConfig,
         this.avatarConfig
@@ -329,47 +486,55 @@ export class AzureTTSAvatarSDK extends EventEmitter {
 
       // Set up event handlers
       this.setupEventHandlers();
+      console.log('✅ [Azure Avatar SDK] Phase 6 completed: Synthesizer created');
 
-      console.log('🎯 [Azure Avatar SDK] Starting avatar session...');
+      // Phase 7: Start avatar session with enhanced timeout
+      console.log('🚀 [Azure Avatar SDK] Phase 7: Starting avatar session...');
       this.updateState({ connectionStatus: 'Starting avatar session...' });
 
-      // Start avatar session
-      await new Promise<void>((resolve, reject) => {
-        this.avatarSynthesizer.startAvatarAsync(
-          this.videoElement,
-          () => {
-            console.log('✅ [Azure Avatar SDK] Avatar session started successfully');
-            this.updateState({
-              isConnected: true,
-              isConnecting: false,
-              connectionStatus: 'Connected',
-              error: null
-            });
-            this.emit('connected');
-            resolve();
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (error: any) => {
-            console.error('❌ [Azure Avatar SDK] Failed to start avatar session:', error);
-            const errorMessage = `Failed to start avatar session: ${error}`;
-            this.updateState({
-              error: errorMessage,
-              isConnecting: false,
-              connectionStatus: 'Connection Failed'
-            });
-            this.emit('error', new Error(errorMessage));
-            reject(new Error(errorMessage));
-          }
-        );
-      });
+      await Promise.race([
+        new Promise<void>((resolve, reject) => {
+          this.avatarSynthesizer.startAvatarAsync(
+            this.videoElement,
+            () => {
+              console.log('✅ [Azure Avatar SDK] Phase 7 completed: Avatar session started successfully');
+              this.updateState({
+                isConnected: true,
+                isConnecting: false,
+                connectionStatus: 'Connected',
+                error: null
+              });
+              this.emit('connected');
+              resolve();
+            },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (error: any) => {
+              console.error('❌ [Azure Avatar SDK] Phase 7 failed: Avatar session error:', error);
+              reject(new Error(`Failed to start avatar session: ${error}`));
+            }
+          );
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Avatar session startup timeout (15s)')), 15000)
+        ),
+        new Promise((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(new Error('Avatar session startup aborted'));
+          });
+        })
+      ]);
+
+      console.log('🎉 [Azure Avatar SDK] Avatar initialization completed successfully!');
+      clearTimeout(initTimeout);
 
     } catch (error) {
+      clearTimeout(initTimeout);
       console.error('💥 [Azure Avatar SDK] Initialization failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Initialization failed';
       
-      // If avatar fails, try TTS fallback
-      if (!this.isFallbackMode) {
-        console.log('🔄 [Azure Avatar SDK] Attempting TTS fallback mode...');
+      // If avatar fails, try TTS fallback as last resort
+      if (!this.isFallbackMode && !errorMessage.includes('fallback')) {
+        console.log('🔄 [Azure Avatar SDK] Attempting TTS fallback mode as last resort...');
         try {
           this.initializeTTSFallbackMode();
           return;
@@ -507,9 +672,84 @@ export class AzureTTSAvatarSDK extends EventEmitter {
     }
   }
 
+  private async runPreInitializationDiagnostics(): Promise<{ issues: string[], canProceed: boolean }> {
+    const issues: string[] = [];
+    
+    console.log('🔍 [Azure Avatar SDK] Running pre-initialization diagnostics...');
+
+    // Check environment
+    if (typeof window === 'undefined') {
+      issues.push('Not running in browser environment');
+      return { issues, canProceed: false };
+    }
+
+    // Check WebRTC support
+    if (typeof RTCPeerConnection === 'undefined') {
+      issues.push('WebRTC (RTCPeerConnection) not supported - avatar functionality requires WebRTC');
+    } else {
+      try {
+        const testConnection = new RTCPeerConnection();
+        if (typeof testConnection.getConfiguration !== 'function') {
+          issues.push('WebRTC getConfiguration method missing - compatibility layer should handle this');
+        }
+        testConnection.close();
+      } catch (error) {
+        issues.push(`WebRTC test failed: ${error}`);
+      }
+    }
+
+    // Check network connectivity
+    if (!navigator.onLine) {
+      issues.push('Browser reports offline status - network connectivity required');
+    }
+
+    // Check required APIs
+    if (!('fetch' in window)) {
+      issues.push('Fetch API not supported');
+    }
+
+    // Check video element requirements
+    if (!this.videoElement) {
+      issues.push('Video element not provided');
+    } else {
+      if (!this.videoElement.play) {
+        issues.push('Video element missing play method');
+      }
+    }
+
+    // Test Azure endpoint accessibility (basic check)
+    try {
+      const testEndpoint = `https://${this.config.speechRegion}.api.cognitive.microsoft.com`;
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 3000);
+      
+      await fetch(testEndpoint, { 
+        method: 'HEAD', 
+        signal: controller.signal,
+        mode: 'no-cors' // Just test connectivity, not response
+      });
+      console.log('✅ [Azure Avatar SDK] Azure endpoint appears reachable');
+    } catch (error) {
+      issues.push(`Azure endpoint may not be reachable: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    const canProceed = issues.length === 0 || issues.every(issue => 
+      issue.includes('WebRTC getConfiguration') || issue.includes('Azure endpoint may not be reachable')
+    );
+
+    if (issues.length > 0) {
+      console.warn('⚠️ [Azure Avatar SDK] Diagnostic issues found:', issues);
+    } else {
+      console.log('✅ [Azure Avatar SDK] Pre-initialization diagnostics passed');
+    }
+
+    return { issues, canProceed };
+  }
+
   private initializeFallbackMode(): void {
-    console.log('🔄 [Azure Avatar SDK] Initializing fallback mode...');
+    console.log('🔄 [Azure Avatar SDK] Initializing enhanced fallback mode...');
     this.isFallbackMode = true;
+    
     this.updateState({
       isConnected: true,
       isConnecting: false,
@@ -517,7 +757,7 @@ export class AzureTTSAvatarSDK extends EventEmitter {
       error: null
     });
 
-    // Show placeholder in video element
+    // Show enhanced placeholder in video element
     if (this.videoElement) {
       this.videoElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
       this.videoElement.style.display = 'flex';
@@ -526,18 +766,31 @@ export class AzureTTSAvatarSDK extends EventEmitter {
       this.videoElement.style.color = 'white';
       this.videoElement.style.fontSize = '16px';
       this.videoElement.style.textAlign = 'center';
+      this.videoElement.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      this.videoElement.style.padding = '20px';
       this.videoElement.innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <div style="font-size: 24px; margin-bottom: 10px;">🎭</div>
-          <div>AI Avatar</div>
-          <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">
-            Azure SDK unavailable - using audio mode
+        <div style="text-align: center; max-width: 80%;">
+          <div style="font-size: 48px; margin-bottom: 16px; animation: pulse 2s infinite;">🎭</div>
+          <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px;">AI Avatar</div>
+          <div style="font-size: 16px; opacity: 0.9; margin-bottom: 8px;">
+            Audio-Only Mode
+          </div>
+          <div style="font-size: 14px; opacity: 0.7; line-height: 1.4;">
+            Visual avatar unavailable<br/>
+            Audio responses will still work
           </div>
         </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+        </style>
       `;
     }
 
     this.emit('connected');
+    console.log('✅ [Azure Avatar SDK] Enhanced fallback mode initialized successfully');
   }
 
   public async speakText(text: string): Promise<void> {

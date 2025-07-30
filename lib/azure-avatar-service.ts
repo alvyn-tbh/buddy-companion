@@ -1,7 +1,7 @@
 'use client';
 
-// CRITICAL: Apply WebRTC polyfill BEFORE any Speech SDK code loads
-import '@/lib/webrtc-polyfill';
+// CRITICAL: Apply WebRTC compatibility BEFORE any Speech SDK code loads
+import '@/lib/webrtc-compatibility';
 
 import { EventEmitter } from 'events';
 
@@ -225,9 +225,8 @@ export class AzureAvatarService extends EventEmitter {
   private async loadSpeechSDK(): Promise<void> {
     if (window.SpeechSDK) return;
 
-    // Ensure WebRTC polyfill is applied before loading SDK
-    const { applyWebRTCPolyfill } = await import('@/lib/webrtc-polyfill');
-    applyWebRTCPolyfill();
+    // WebRTC compatibility is already applied via the import at the top of this file
+    console.log('🔄 Loading Azure Speech SDK...');
 
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
@@ -235,15 +234,26 @@ export class AzureAvatarService extends EventEmitter {
       script.async = true;
 
       script.onload = () => {
-        // Re-apply WebRTC polyfill after SDK loads
-        applyWebRTCPolyfill();
-        
         if (window.SpeechSDK) {
-          console.log('✅ Speech SDK loaded successfully');
-          resolve();
-        } else {
-          reject(new Error('Speech SDK loaded but not available'));
+        console.log('✅ Speech SDK loaded successfully');
+        // Emergency patch for getConfiguration after SDK load
+        if (typeof RTCPeerConnection !== 'undefined' && typeof RTCPeerConnection.prototype.getConfiguration !== 'function') {
+          console.warn('⚠️ getConfiguration missing after SDK load, applying emergency patch');
+          RTCPeerConnection.prototype.getConfiguration = function() {
+            console.log('📤 Emergency getConfiguration called');
+            return {
+              iceServers: [],
+              iceTransportPolicy: 'all',
+              bundlePolicy: 'balanced',
+              rtcpMuxPolicy: 'require',
+              certificates: []
+            };
+          };
         }
+        resolve();
+      } else {
+        reject(new Error('Speech SDK loaded but not available'));
+      }
       };
 
       script.onerror = () => {
@@ -301,6 +311,20 @@ export class AzureAvatarService extends EventEmitter {
     console.debug('Viseme received:', visemeId);
   }
 
+  private peerConnection: RTCPeerConnection | null = null;
+  private audioElement: HTMLAudioElement | null = null;
+
+  private async fetchIceToken(): Promise<{ Urls: string[]; Username: string; Password: string }> {
+    const endpoint = `https://${this.config.speechRegion}.tts.speech.microsoft.com/cognitiveservices/avatar/relay/token/v1`;
+    const response = await fetch(endpoint, {
+      headers: { 'Ocp-Apim-Subscription-Key': this.config.speechKey }
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ICE token: ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
   async connect(): Promise<void> {
     if (!this.state.isInitialized || !this.avatarSynthesizer || !this.videoElement) {
       throw new Error('Avatar service not initialized');
@@ -308,15 +332,38 @@ export class AzureAvatarService extends EventEmitter {
 
     try {
       this.updateState({ isConnecting: true });
-      
-      // Start avatar video
-      const avatarStream = await this.avatarSynthesizer.startAvatarAsync(
-        this.videoElement
-      );
 
-      if (this.config.streamingMode) {
-        this.streamConnection = avatarStream;
-      }
+      // Fetch ICE servers
+      const iceInfo = await this.fetchIceToken();
+      const iceServers = [{
+        urls: iceInfo.Urls,
+        username: iceInfo.Username,
+        credential: iceInfo.Password
+      }];
+
+      // Create peer connection
+      this.peerConnection = new RTCPeerConnection({ iceServers });
+
+      // Handle tracks
+      this.peerConnection.ontrack = (event) => {
+        if (event.track.kind === 'video') {
+          if (this.videoElement) {
+            this.videoElement.srcObject = event.streams[0];
+          }
+        } else if (event.track.kind === 'audio') {
+          this.audioElement = new Audio();
+          this.audioElement.srcObject = event.streams[0];
+          this.audioElement.autoplay = true;
+          this.audioElement.play().catch(e => console.error('Audio play error:', e));
+        }
+      };
+
+      // Add transceivers
+      this.peerConnection.addTransceiver('video', { direction: 'recvonly' });
+      this.peerConnection.addTransceiver('audio', { direction: 'recvonly' });
+
+      // Start avatar
+      await this.avatarSynthesizer.startAvatarAsync(this.videoElement);
 
       this.updateState({ isConnected: true, isConnecting: false });
       this.emit('connected');
@@ -333,11 +380,22 @@ export class AzureAvatarService extends EventEmitter {
 
     try {
       await this.avatarSynthesizer.stopAvatarAsync();
-      
-      if (this.streamConnection) {
-        // Stop all tracks in the stream
-        this.streamConnection.getTracks().forEach(track => track.stop());
-        this.streamConnection = null;
+
+      if (this.peerConnection) {
+        this.peerConnection.close();
+        this.peerConnection = null;
+      }
+
+      if (this.audioElement) {
+        this.audioElement.pause();
+        this.audioElement.srcObject = null;
+        this.audioElement = null;
+      }
+
+      if (this.videoElement && this.videoElement.srcObject) {
+        const stream = this.videoElement.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        this.videoElement.srcObject = null;
       }
 
       if (this.visemeAnimationFrame) {

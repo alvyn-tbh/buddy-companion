@@ -1,5 +1,8 @@
 'use client';
 
+// CRITICAL: Apply WebRTC compatibility BEFORE any Speech SDK code loads
+import '@/lib/webrtc-compatibility';
+
 /**
  * Optimized Azure Text-to-Speech Avatar Service
  * Features:
@@ -160,11 +163,28 @@ export class AzureTTSAvatarSDKOptimized extends EventTarget {
   private async ensureSDKLoaded(): Promise<void> {
     if (window.SpeechSDK) return;
 
-    // Try to load SDK with short timeout
+    console.log('📦 [Azure Avatar Optimized] Loading SDK...');
+
+    // Try to load SDK with fallback URLs
+    for (let i = 0; i < SDK_URLS.length; i++) {
+      try {
+        await this.loadSDKFromURL(SDK_URLS[i], i === 0 ? 5000 : 3000); // First URL gets more time
+        console.log(`✅ [Azure Avatar Optimized] SDK loaded from: ${SDK_URLS[i]}`);
+        return;
+      } catch (error) {
+        console.warn(`⚠️ [Azure Avatar Optimized] Failed to load from ${SDK_URLS[i]}:`, error);
+        if (i === SDK_URLS.length - 1) {
+          throw new Error(`Failed to load SDK from all ${SDK_URLS.length} sources`);
+        }
+      }
+    }
+  }
+
+  private async loadSDKFromURL(url: string, timeoutMs: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('SDK loading timeout'));
-      }, 5000); // 5 second timeout
+        reject(new Error(`SDK loading timeout (${timeoutMs}ms)`));
+      }, timeoutMs);
 
       if (window.SpeechSDK) {
         clearTimeout(timeout);
@@ -173,29 +193,43 @@ export class AzureTTSAvatarSDKOptimized extends EventTarget {
       }
 
       const script = document.createElement('script');
-      script.src = SDK_URLS[0];
+      script.src = url;
       script.async = true;
       
       script.onload = () => {
         clearTimeout(timeout);
         if (window.SpeechSDK) {
-          console.log('✅ [Azure Avatar Optimized] SDK loaded');
           resolve();
         } else {
           reject(new Error('SDK not available after load'));
         }
       };
       
-      script.onerror = () => {
+      script.onerror = (event) => {
         clearTimeout(timeout);
-        reject(new Error('SDK load failed'));
+        reject(new Error(`SDK load failed: ${event}`));
       };
       
-      document.head.appendChild(script);
+      try {
+        document.head.appendChild(script);
+      } catch (appendError) {
+        clearTimeout(timeout);
+        reject(new Error(`Failed to append script: ${appendError}`));
+      }
     });
   }
 
   private createSpeechConfig(): void {
+    // Basic credential validation
+    if (!this.config.speechKey || this.config.speechKey.length < 32) {
+      throw new Error('Invalid Azure Speech Key - key appears to be missing or too short');
+    }
+    
+    if (!this.config.speechRegion || !/^[a-z]+[a-z0-9]*$/.test(this.config.speechRegion)) {
+      throw new Error('Invalid Azure Speech Region format');
+    }
+
+    console.log('🔑 [Azure Avatar Optimized] Creating speech config...');
     this.speechConfig = window.SpeechSDK.SpeechConfig.fromSubscription(
       this.config.speechKey,
       this.config.speechRegion
@@ -205,7 +239,7 @@ export class AzureTTSAvatarSDKOptimized extends EventTarget {
       this.speechConfig.speechSynthesisVoiceName = this.config.voice;
     }
 
-    // Optimize connection settings
+    // Optimize connection settings for fast performance
     this.speechConfig.setProperty(
       window.SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, 
       "3000"
@@ -214,6 +248,8 @@ export class AzureTTSAvatarSDKOptimized extends EventTarget {
       window.SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, 
       "2000"
     );
+    
+    console.log('✅ [Azure Avatar Optimized] Speech config created successfully');
   }
 
   private async initializeTTSImmediate(): Promise<void> {
