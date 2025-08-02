@@ -6,7 +6,7 @@ import { trackPageView } from "@/lib/analytics";
 import { AuthGuard } from '@/components/auth-guard';
 
 // Dynamic import of Chat component to reduce initial bundle size
-const Chat = dynamic(() => import('@/components/chat'), {
+const Chat = dynamic(() => import('@/components/chat-with-avatar'), {
   loading: () => (
     <div className="w-full min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">

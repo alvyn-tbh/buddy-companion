@@ -14,6 +14,7 @@
   "dependencies": {
     "@ai-sdk/deepinfra": "^0.2.7",
     "@ai-sdk/react": "^1.2.6",
+    "@heygen/streaming-avatar": "^2.0.16",
     "@opentelemetry/api-logs": "^0.200.0",
     "@opentelemetry/instrumentation": "^0.200.0",
     "@opentelemetry/sdk-logs": "^0.200.0",
@@ -27,6 +28,7 @@
     "@supabase/supabase-js": "^2.50.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/otel": "^1.10.4",
+    "ahooks": "^3.9.0",
     "ai": "^4.3.2",
     "autoevals": "^0.0.125",
     "braintrust": "^0.0.195",
