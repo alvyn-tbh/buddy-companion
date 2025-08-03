@@ -61,7 +61,13 @@ export async function transcribeAudio(
     console.log('Starting audio transcription with OpenAI Whisper API...');
 
     // Create a File object from the buffer for the OpenAI API
-    const audioFile = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
+    // Convert Buffer to ArrayBuffer for browser compatibility
+    const arrayBuffer = audioBuffer.buffer.slice(audioBuffer.byteOffset, audioBuffer.byteOffset + audioBuffer.byteLength);
+    // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer)
+    const properArrayBuffer = arrayBuffer instanceof SharedArrayBuffer 
+      ? new Uint8Array(arrayBuffer).slice().buffer 
+      : arrayBuffer;
+    const audioFile = new File([properArrayBuffer], 'audio.webm', { type: 'audio/webm' });
 
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
@@ -205,4 +211,4 @@ export function getSupportedAudioFormats(): string[] {
     'wav',
     'webm'
   ];
-} 
+}

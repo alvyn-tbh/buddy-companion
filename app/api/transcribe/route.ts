@@ -76,13 +76,12 @@ export async function POST(request: NextRequest) {
       responseFormat
     });
 
-    // Convert File to Buffer for OpenAI API
+    // Convert File to ArrayBuffer for OpenAI API
     const arrayBuffer = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // Call OpenAI Whisper API
     const transcription = await openai.audio.transcriptions.create({
-      file: new File([buffer], audioFile.name, { type: audioFile.type }),
+      file: new File([arrayBuffer], audioFile.name, { type: audioFile.type }),
       model: 'whisper-1',
       language: language,
       response_format: responseFormat as 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt',
@@ -180,4 +179,4 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
-} 
+}

@@ -22,8 +22,8 @@ export class VoiceActivityDetector {
   protected audioContext: AudioContext | null = null;
   protected analyser: AnalyserNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
-  protected frequencyData: Uint8Array | null = null;
-  private timeData: Uint8Array | null = null;
+  protected frequencyData: Uint8Array<ArrayBuffer> | null = null;
+  private timeData: Uint8Array<ArrayBuffer> | null = null;
   
   protected config: Required<VADConfig>;
   private callbacks: VADCallbacks;
@@ -70,9 +70,9 @@ export class VoiceActivityDetector {
       this.source = this.audioContext.createMediaStreamSource(stream);
       this.source.connect(this.analyser);
       
-      // Initialize data arrays
-      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-      this.timeData = new Uint8Array(this.analyser.fftSize);
+      // Initialize data arrays with proper ArrayBuffer backing
+      this.frequencyData = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
+      this.timeData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize));
       
       // Start processing
       this.startProcessing();
@@ -228,11 +228,11 @@ export class VoiceActivityDetector {
       if (config.minDecibels !== undefined) this.analyser.minDecibels = config.minDecibels;
       if (config.maxDecibels !== undefined) this.analyser.maxDecibels = config.maxDecibels;
       
-      // Reinitialize data arrays if FFT size changed
-      if (config.fftSize !== undefined) {
-        this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-        this.timeData = new Uint8Array(this.analyser.fftSize);
-      }
+             // Reinitialize data arrays if FFT size changed
+       if (config.fftSize !== undefined) {
+         this.frequencyData = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
+         this.timeData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize));
+       }
     }
   }
 }
