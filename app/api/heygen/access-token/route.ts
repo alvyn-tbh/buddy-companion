@@ -22,6 +22,11 @@ export async function POST() {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('HeyGen API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
       return NextResponse.json(
         { error: errorData.message || 'Failed to create session token' },
         { status: response.status }
