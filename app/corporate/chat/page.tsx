@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { trackPageView } from "@/lib/analytics";
 import { AuthGuard } from '@/components/auth-guard';
-import { Button } from '@/components/ui/button';
 import { Video, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 

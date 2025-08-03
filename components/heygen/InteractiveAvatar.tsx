@@ -29,10 +29,11 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
   const [isMuted, setIsMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfiguration | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{ fps?: number; latency?: number; quality?: string }>({});
+  const [debugInfo] = useState<{ fps?: number; latency?: number; quality?: string }>({});
   
   const avatarRef = useRef<StreamingAvatar | null>(null);
   const sessionDataRef = useRef<StartAvatarResponse | null>(null);
+  const handleEndSessionRef = useRef<(() => Promise<void>) | null>(null);
 
   // Initialize the avatar instance
   useEffect(() => {
@@ -63,7 +64,7 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
         
         avatarRef.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
           console.log('Stream disconnected');
-          handleEndSession();
+          handleEndSessionRef.current?.();
         });
         
         avatarRef.current.on(StreamingEvents.STREAM_READY, (event) => {
@@ -82,7 +83,17 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
     
     return () => {
       if (avatarRef.current) {
-        avatarRef.current.destroy();
+        // Cleanup avatar resources
+        try {
+          // Stop any active avatar session
+          if (sessionDataRef.current) {
+            avatarRef.current.stopAvatar().catch(console.error);
+          }
+          // Note: StreamingAvatar doesn't have a destroy method
+          // The instance will be garbage collected when ref is cleared
+        } catch (error) {
+          console.error('Error during avatar cleanup:', error);
+        }
       }
     };
   }, []);
@@ -94,7 +105,6 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
     
     try {
       await avatarRef.current.speak({
-        sessionId: sessionDataRef.current.sessionId,
         text,
       });
     } catch (error) {
@@ -142,9 +152,7 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
     if (!avatarRef.current || !sessionDataRef.current) return;
     
     try {
-      await avatarRef.current.stopAvatar({
-        sessionId: sessionDataRef.current.sessionId,
-      });
+      await avatarRef.current.stopAvatar();
       
       setStream(null);
       setIsSessionActive(false);
@@ -156,6 +164,11 @@ export function InteractiveAvatar({ onMessageSend, className = '' }: Interactive
       toast.error('Failed to end session properly');
     }
   }, []);
+
+  // Update the ref when handleEndSession changes
+  useEffect(() => {
+    handleEndSessionRef.current = handleEndSession;
+  }, [handleEndSession]);
 
   const handleRestartSession = useCallback(async () => {
     if (!avatarConfig) return;
