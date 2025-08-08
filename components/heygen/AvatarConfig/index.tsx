@@ -1,148 +1,193 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Field } from './Field';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useMemo, useState } from "react";
+import {
+  AvatarQuality,
+  ElevenLabsModel,
+  STTProvider,
+  VoiceEmotion,
+  StartAvatarRequest,
+  VoiceChatTransport,
+} from "@heygen/streaming-avatar";
+
+import { Input } from "../Input";
+import { Select } from "../Select";
+
+import { Field } from "./Field";
+
+import { AVATARS, STT_LANGUAGE_LIST } from "../constants";
 
 interface AvatarConfigProps {
-  onStart: (config: AvatarConfiguration) => void;
-  isStarting: boolean;
+  onConfigChange: (config: StartAvatarRequest) => void;
+  config: StartAvatarRequest;
 }
 
-export interface AvatarConfiguration {
-  avatarId: string;
-  voiceId: string;
-  language: string;
-  quality: 'low' | 'medium' | 'high';
-}
-
-// Default avatars and voices from HeyGen
-const DEFAULT_AVATARS = [
-  { id: 'avatar_wayne_20240711', name: 'Wayne' },
-  { id: 'avatar_josh_20240711', name: 'Josh' },
-  { id: 'avatar_anna_20240711', name: 'Anna' },
-  { id: 'avatar_susan_20240711', name: 'Susan' },
-];
-
-const DEFAULT_VOICES = [
-  { id: '0a1f130137ff4ba2a21eda84dc12cbd5', name: 'Eric - Natural' },
-  { id: '001a77bb29084102bfcf3117bb497eb9', name: 'Paul - Natural' },
-  { id: '00988b7ed1c3430f93d75ce32b88e2ad', name: 'Jennifer - Natural' },
-  { id: '00d76ba1cf37448589ad123faa39ea4b', name: 'Emily - Natural' },
-];
-
-const LANGUAGES = [
-  { id: 'en', name: 'English' },
-  { id: 'es', name: 'Spanish' },
-  { id: 'fr', name: 'French' },
-  { id: 'de', name: 'German' },
-  { id: 'it', name: 'Italian' },
-  { id: 'pt', name: 'Portuguese' },
-  { id: 'zh', name: 'Chinese' },
-  { id: 'ja', name: 'Japanese' },
-  { id: 'ko', name: 'Korean' },
-];
-
-export function AvatarConfig({ onStart, isStarting }: AvatarConfigProps) {
-  const [config, setConfig] = useState<AvatarConfiguration>({
-    avatarId: DEFAULT_AVATARS[0].id,
-    voiceId: DEFAULT_VOICES[0].id,
-    language: 'en',
-    quality: 'high',
-  });
-
-  const handleStart = () => {
-    onStart(config);
+export const AvatarConfig: React.FC<AvatarConfigProps> = ({
+  onConfigChange,
+  config,
+}) => {
+  const onChange = <T extends keyof StartAvatarRequest>(
+    key: T,
+    value: StartAvatarRequest[T],
+  ) => {
+    onConfigChange({ ...config, [key]: value });
   };
+  const [showMore, setShowMore] = useState<boolean>(false);
+
+  const selectedAvatar = useMemo(() => {
+    const avatar = AVATARS.find(
+      (avatar) => avatar.avatar_id === config.avatarName,
+    );
+
+    if (!avatar) {
+      return {
+        isCustom: true,
+        name: "Custom Avatar ID",
+        avatarId: null,
+      };
+    } else {
+      return {
+        isCustom: false,
+        name: avatar.name,
+        avatarId: avatar.avatar_id,
+      };
+    }
+  }, [config.avatarName]);
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Configure Your Avatar</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <Field label="Select Avatar">
-          <Select
-            value={config.avatarId}
-            onValueChange={(value) => setConfig({ ...config, avatarId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose an avatar" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEFAULT_AVATARS.map((avatar) => (
-                <SelectItem key={avatar.id} value={avatar.id}>
-                  {avatar.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field label="Select Voice">
-          <Select
-            value={config.voiceId}
-            onValueChange={(value) => setConfig({ ...config, voiceId: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a voice" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEFAULT_VOICES.map((voice) => (
-                <SelectItem key={voice.id} value={voice.id}>
-                  {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field label="Language">
-          <Select
-            value={config.language}
-            onValueChange={(value) => setConfig({ ...config, language: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map((lang) => (
-                <SelectItem key={lang.id} value={lang.id}>
-                  {lang.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field label="Video Quality">
-          <Select
-            value={config.quality}
-            onValueChange={(value: 'low' | 'medium' | 'high') => 
-              setConfig({ ...config, quality: value })
+    <div className="relative flex flex-col gap-4 w-[550px] py-8 max-h-full overflow-y-auto px-4">
+      <Field label="Custom Knowledge Base ID">
+        <Input
+          placeholder="Enter custom knowledge base ID"
+          value={config.knowledgeId}
+          onChange={(value) => onChange("knowledgeId", value)}
+        />
+      </Field>
+      <Field label="Avatar ID">
+        <Select
+          isSelected={(option) =>
+            typeof option === "string"
+              ? !!selectedAvatar?.isCustom
+              : option.avatar_id === selectedAvatar?.avatarId
+          }
+          options={[...AVATARS, "CUSTOM"]}
+          placeholder="Select Avatar"
+          renderOption={(option) => {
+            return typeof option === "string"
+              ? "Custom Avatar ID"
+              : option.name;
+          }}
+          value={
+            selectedAvatar?.isCustom ? "Custom Avatar ID" : selectedAvatar?.name
+          }
+          onSelect={(option) => {
+            if (typeof option === "string") {
+              onChange("avatarName", "");
+            } else {
+              onChange("avatarName", option.avatar_id);
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select quality" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-            </SelectContent>
-          </Select>
+          }}
+        />
+      </Field>
+      {selectedAvatar?.isCustom && (
+        <Field label="Custom Avatar ID">
+          <Input
+            placeholder="Enter custom avatar ID"
+            value={config.avatarName}
+            onChange={(value) => onChange("avatarName", value)}
+          />
         </Field>
-
-        <Button 
-          onClick={handleStart} 
-          className="w-full"
-          disabled={isStarting}
+      )}
+      <Field label="Language">
+        <Select
+          isSelected={(option) => option.value === config.language}
+          options={STT_LANGUAGE_LIST}
+          placeholder="Select Language"
+          renderOption={(option) => option.label}
+          value={STT_LANGUAGE_LIST.find((lang) => lang.value === config.language)?.label}
+          onSelect={(option) => onChange("language", option.value)}
+        />
+      </Field>
+      <Field label="Quality">
+        <Select
+          isSelected={(option) => option === config.quality}
+          options={Object.values(AvatarQuality)}
+          placeholder="Select Quality"
+          renderOption={(option) => option.toUpperCase()}
+          value={config.quality?.toUpperCase()}
+          onSelect={(option) => onChange("quality", option)}
+        />
+      </Field>
+      <Field label="Voice Chat Transport">
+        <Select
+          isSelected={(option) => option === config.voiceChatTransport}
+          options={Object.values(VoiceChatTransport)}
+          placeholder="Select Transport"
+          renderOption={(option) => option.toUpperCase()}
+          value={config.voiceChatTransport?.toUpperCase()}
+          onSelect={(option) => onChange("voiceChatTransport", option)}
+        />
+      </Field>
+      <Field label="STT Provider">
+        <Select
+          isSelected={(option) => option === config.sttSettings?.provider}
+          options={Object.values(STTProvider)}
+          placeholder="Select STT Provider"
+          renderOption={(option) => option.toUpperCase()}
+          value={config.sttSettings?.provider?.toUpperCase()}
+          onSelect={(option) =>
+            onChange("sttSettings", { ...config.sttSettings, provider: option })
+          }
+        />
+      </Field>
+      <div className="flex flex-col gap-2">
+        <button
+          className="text-sm text-zinc-400 hover:text-white"
+          onClick={() => setShowMore(!showMore)}
         >
-          {isStarting ? 'Starting Session...' : 'Start Avatar Session'}
-        </Button>
-      </CardContent>
-    </Card>
+          {showMore ? "Show Less" : "Show More"}
+        </button>
+        {showMore && (
+          <div className="flex flex-col gap-4">
+            <Field label="Voice Model">
+              <Select
+                isSelected={(option) => option === config.voice?.model}
+                options={Object.values(ElevenLabsModel)}
+                placeholder="Select Voice Model"
+                renderOption={(option) => option.toUpperCase()}
+                value={config.voice?.model?.toUpperCase()}
+                onSelect={(option) =>
+                  onChange("voice", { ...config.voice, model: option })
+                }
+              />
+            </Field>
+            <Field label="Voice Emotion">
+              <Select
+                isSelected={(option) => option === config.voice?.emotion}
+                options={Object.values(VoiceEmotion)}
+                placeholder="Select Voice Emotion"
+                renderOption={(option) => option.toUpperCase()}
+                value={config.voice?.emotion?.toUpperCase()}
+                onSelect={(option) =>
+                  onChange("voice", { ...config.voice, emotion: option })
+                }
+              />
+            </Field>
+            <Field label="Voice Rate">
+              <Input
+                placeholder="Enter voice rate (0.5 - 2.0)"
+                value={config.voice?.rate?.toString()}
+                onChange={(value) => {
+                  const rate = parseFloat(value);
+                  if (!isNaN(rate) && rate >= 0.5 && rate <= 2.0) {
+                    onChange("voice", { ...config.voice, rate });
+                  }
+                }}
+              />
+            </Field>
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
+};

@@ -1,47 +1,93 @@
-'use client';
+import { TaskType, TaskMode } from "@heygen/streaming-avatar";
+import React, { useCallback, useEffect, useState } from "react";
+import { usePrevious } from "ahooks";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Send, Loader2 } from 'lucide-react';
+import { Select } from "../Select";
+import { Button } from "../Button";
+import { SendIcon } from "../Icons";
+import { useTextChat } from "../logic/useTextChat";
+import { Input } from "../Input";
+import { useConversationState } from "../logic/useConversationState";
 
-interface TextInputProps {
-  onSend: (text: string) => void;
-  isProcessing: boolean;
-  placeholder?: string;
-}
+export const TextInput: React.FC = () => {
+  const { sendMessage, sendMessageSync, repeatMessage, repeatMessageSync } =
+    useTextChat();
+  const { startListening, stopListening } = useConversationState();
+  const [taskType, setTaskType] = useState<TaskType>(TaskType.TALK);
+  const [taskMode, setTaskMode] = useState<TaskMode>(TaskMode.ASYNC);
+  const [message, setMessage] = useState("");
 
-export function TextInput({ onSend, isProcessing, placeholder = "Type your message..." }: TextInputProps) {
-  const [text, setText] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (text.trim() && !isProcessing) {
-      onSend(text.trim());
-      setText('');
+  const handleSend = useCallback(() => {
+    if (message.trim() === "") {
+      return;
     }
-  };
+    if (taskType === TaskType.TALK) {
+      taskMode === TaskMode.SYNC
+        ? sendMessageSync(message)
+        : sendMessage(message);
+    } else {
+      taskMode === TaskMode.SYNC
+        ? repeatMessageSync(message)
+        : repeatMessage(message);
+    }
+    setMessage("");
+  }, [
+    taskType,
+    taskMode,
+    message,
+    sendMessage,
+    sendMessageSync,
+    repeatMessage,
+    repeatMessageSync,
+  ]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        handleSend();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSend]);
+
+  const previousText = usePrevious(message);
+
+  useEffect(() => {
+    if (!previousText && message) {
+      startListening();
+    } else if (previousText && !message) {
+      stopListening();
+    }
+  }, [message, previousText, startListening, stopListening]);
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <Input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder}
-        disabled={isProcessing}
-        className="flex-1"
+    <div className="flex flex-row gap-2 items-end w-full">
+      <Select
+        isSelected={(option) => option === taskType}
+        options={Object.values(TaskType)}
+        renderOption={(option) => option.toUpperCase()}
+        value={taskType.toUpperCase()}
+        onSelect={setTaskType}
       />
-      <Button 
-        type="submit" 
-        size="icon"
-        disabled={!text.trim() || isProcessing}
-      >
-        {isProcessing ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
+      <Select
+        isSelected={(option) => option === taskMode}
+        options={Object.values(TaskMode)}
+        renderOption={(option) => option.toUpperCase()}
+        value={taskMode.toUpperCase()}
+        onSelect={setTaskMode}
+      />
+      <Input
+        className="min-w-[500px]"
+        placeholder={`Type something for the avatar to ${taskType === TaskType.REPEAT ? "repeat" : "respond"}...`}
+        value={message}
+        onChange={setMessage}
+      />
+      <Button className="!p-2" onClick={handleSend}>
+        <SendIcon size={20} />
       </Button>
-    </form>
+    </div>
   );
-}
+};
