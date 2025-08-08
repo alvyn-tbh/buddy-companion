@@ -40,10 +40,10 @@ export default function UsageDashboard() {
   const fetchUsageStats = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const endDate = new Date();
       const startDate = new Date();
-      
+
       switch (timeRange) {
         case '7d':
           startDate.setDate(endDate.getDate() - 7);
@@ -60,7 +60,7 @@ export default function UsageDashboard() {
       }
 
       const response = await fetch(`/api/admin/usage?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&userId=${selectedUser !== 'all' ? selectedUser : ''}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch usage stats');
       }
@@ -68,7 +68,7 @@ export default function UsageDashboard() {
       const data = await response.json();
       setStats(data.current);
       setPreviousStats(data.previous);
-      
+
       // Fetch users if not already loaded
       if (users.length === 0) {
         const usersResponse = await fetch('/api/admin/users');
@@ -296,7 +296,7 @@ export default function UsageDashboard() {
                 const height = maxCost > 0 ? (day.cost / maxCost) * 100 : 0;
                 return (
                   <div key={day.date} className="flex-1 min-w-[40px] flex flex-col items-center">
-                    <div 
+                    <div
                       className="w-full bg-blue-500 rounded-t"
                       style={{ height: `${height}%` }}
                     />
@@ -315,4 +315,4 @@ export default function UsageDashboard() {
       </div>
     </div>
   );
-} 
+}

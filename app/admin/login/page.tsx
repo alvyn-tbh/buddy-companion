@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
             Enter your credentials to access the queue dashboard
           </p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
                 placeholder="Enter username"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
@@ -128,4 +128,4 @@ export default function AdminLoginPage() {
       </div>
     </div>
   );
-} 
+}
