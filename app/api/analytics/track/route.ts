@@ -28,43 +28,54 @@ export async function POST(request: NextRequest) {
     // Create Supabase client
     const supabase = await createClient();
 
-    // Insert engagement metric
-    const { data, error } = await supabase
-      .from('engagement_metrics')
-      .insert({
-        visitor_id,
-        session_id,
-        service_used,
-        environment,
-        timestamp: new Date().toISOString(),
-        user_agent: userAgent,
-        ip_address: ipAddress,
-        // Note: Country and city would require IP geolocation service
-        country: null,
-        city: null,
-      })
-      .select()
-      .single();
+    // Insert engagement metric with better error handling
+    try {
+      const { data, error } = await supabase
+        .from('engagement_metrics')
+        .insert({
+          visitor_id,
+          session_id,
+          service_used,
+          environment,
+          timestamp: new Date().toISOString(),
+          user_agent: userAgent,
+          ip_address: ipAddress,
+          // Note: Country and city would require IP geolocation service
+          country: null,
+          city: null,
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error inserting engagement metric:', error);
-      return NextResponse.json(
-        { error: 'Failed to track engagement' },
-        { status: 500 }
-      );
+      if (error) {
+        console.error('Error inserting engagement metric:', error);
+        // Don't return 500 error, just log and continue
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Analytics tracking failed but continuing' 
+        });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        data,
+        message: 'Engagement tracked successfully' 
+      });
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      // Return success even if database fails to prevent client errors
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Analytics service temporarily unavailable' 
+      });
     }
-
-    return NextResponse.json({ 
-      success: true, 
-      data,
-      message: 'Engagement tracked successfully' 
-    });
 
   } catch (error) {
     console.error('Error in engagement tracking:', error);
+    // Return success to prevent client-side errors
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { success: false, message: 'Analytics service temporarily unavailable' },
+      { status: 200 }
     );
   }
 }

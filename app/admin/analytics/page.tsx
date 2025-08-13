@@ -33,13 +33,13 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [environment, setEnvironment] = useState<'dev' | 'prod'>('prod');
   const [timeRange, setTimeRange] = useState(30);
-  
+
   const fetchEngagementData = useCallback(async () => {
     try {
       const response = await fetch(`/api/analytics/track?environment=${environment}&days=${timeRange}`, {
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           window.location.href = '/admin/login';
@@ -47,7 +47,7 @@ export default function AnalyticsDashboard() {
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       if (result.success && result.data) {
         setEngagementData(result.data);
@@ -57,14 +57,14 @@ export default function AnalyticsDashboard() {
       toast.error('Failed to fetch engagement data');
     }
   }, [environment, timeRange]);
-  
+
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/admin/logout', {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         window.location.href = '/admin/login';
       } else {
@@ -75,12 +75,12 @@ export default function AnalyticsDashboard() {
       toast.error('Logout failed');
     }
   };
-  
+
   useEffect(() => {
     setLoading(true);
     fetchEngagementData().finally(() => setLoading(false));
   }, [fetchEngagementData]);
-  
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -91,11 +91,11 @@ export default function AnalyticsDashboard() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav onLogout={handleLogout} />
-      
+
       <div className="p-4 sm:p-6 max-w-full">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
@@ -133,7 +133,7 @@ export default function AnalyticsDashboard() {
               </Button>
             </div>
           </div>
-          
+
           {/* Visitor Metrics */}
           {engagementData && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -147,7 +147,7 @@ export default function AnalyticsDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <UserCheck className="h-8 w-8 text-green-600" />
@@ -158,7 +158,7 @@ export default function AnalyticsDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <Activity className="h-8 w-8 text-purple-600" />
@@ -169,7 +169,7 @@ export default function AnalyticsDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <Clock className="h-8 w-8 text-yellow-600" />
@@ -182,7 +182,7 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
           )}
-          
+
           {/* Additional Metrics */}
           {engagementData && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -200,7 +200,7 @@ export default function AnalyticsDashboard() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center gap-3 mb-4">
                   <Globe className="h-6 w-6 text-green-600" />
@@ -217,7 +217,7 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
           )}
-          
+
           {/* Service Usage Breakdown */}
           {engagementData?.service_usage && (
             <div className="bg-white p-4 sm:p-6 rounded-lg border overflow-x-auto">
@@ -238,7 +238,7 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
           )}
-          
+
           {/* Daily Visitors Chart */}
           {engagementData?.daily_visitors && (
             <div className="bg-white p-4 sm:p-6 rounded-lg border overflow-x-auto">
@@ -254,9 +254,9 @@ export default function AnalyticsDashboard() {
                     .map(([date, count]) => (
                       <div key={date} className="text-center p-3 bg-gray-50 rounded-lg">
                         <p className="font-semibold text-sm">
-                          {new Date(date).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric' 
+                          {new Date(date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
                           })}
                         </p>
                         <p className="text-xl font-bold text-blue-600">{count.toLocaleString()}</p>

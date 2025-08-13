@@ -20,6 +20,7 @@
 - **🎤 Real-time Speech-to-Speech Communication** - WebRTC-powered voice mode for natural conversations
 - **🤖 Advanced AI Integration** - Powered by OpenAI GPT models with streaming responses
 - **🔊 High-Quality TTS** - OpenAI TTS with multiple voices and quality options
+- **🎥 HeyGen Interactive Avatar** - Video-based AI conversations with realistic digital avatars
 - **📝 Text Chat Interface** - Traditional chat with markdown support and streaming responses
 - **🎨 Modern UI** - Built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind CSS](https://tailwindcss.com)
 - **⚡ Performance Optimized** - Built with the latest [Next.js](https://nextjs.org) App Router
