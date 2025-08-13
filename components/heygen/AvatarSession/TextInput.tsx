@@ -22,13 +22,17 @@ export const TextInput: React.FC = () => {
       return;
     }
     if (taskType === TaskType.TALK) {
-      taskMode === TaskMode.SYNC
-        ? sendMessageSync(message)
-        : sendMessage(message);
+      if (taskMode === TaskMode.SYNC) {
+        sendMessageSync(message);
+      } else {
+        sendMessage(message);
+      }
     } else {
-      taskMode === TaskMode.SYNC
-        ? repeatMessageSync(message)
-        : repeatMessage(message);
+      if (taskMode === TaskMode.SYNC) {
+        repeatMessageSync(message);
+      } else {
+        repeatMessage(message);
+      }
     }
     setMessage("");
   }, [

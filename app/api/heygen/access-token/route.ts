@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY;
 
 export async function POST() {
@@ -63,7 +61,7 @@ export async function POST() {
 
     // Return token as plain text, matching the official demo format
     console.log('✅ [HeyGen API] Returning token as plain text to client');
-    
+
     return new Response(data.data.token, {
       status: 200,
     });

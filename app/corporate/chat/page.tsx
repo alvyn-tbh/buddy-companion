@@ -56,57 +56,6 @@ export default function Page() {
     localStorage.setItem('corporate_voice_speed', voiceConfig.speed.toString());
   }, [voiceConfig]);
 
-  // Handler for avatar messages that integrates with the corporate API
-  const handleAvatarMessage = async (message: string): Promise<string> => {
-    try {
-      // Call the corporate API endpoint
-      const response = await fetch('/api/corporate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'user', content: message }
-          ]
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      // Read the streamed response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullResponse = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          // Parse streaming response chunks
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('0:')) {
-              const content = line.substring(2);
-              if (content.trim()) {
-                fullResponse += content;
-              }
-            }
-          }
-        }
-      }
-
-      return fullResponse || "I understand your request. How can I help you further?";
-    } catch (error) {
-      console.error('Error in avatar message handler:', error);
-      return "I apologize, but I encountered an error processing your request. Please try again.";
-    }
-  };
-
   return (
     <AuthGuard redirectTo="/corporate">
       <div className="corporate-chat-container w-full min-h-screen flex flex-col py-2 sm:py-4 lg:py-8 px-2 sm:px-6 lg:px-8">
