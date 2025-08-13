@@ -20,9 +20,9 @@ const Chat = dynamic(() => import('@/components/chat'), {
   ssr: false // Disable SSR for chat component to prevent hydration issues
 });
 
-// Dynamic import of InteractiveAvatar component
-const InteractiveAvatar = dynamic(() => 
-  import('@/components/heygen/InteractiveAvatar').then(mod => ({ default: mod.InteractiveAvatar })), 
+// Dynamic import of InteractiveAvatar component (return the component directly)
+const InteractiveAvatar = dynamic(
+  () => import('@/components/heygen/InteractiveAvatar').then((m) => m.default),
   {
     loading: () => (
       <div className="w-full min-h-screen flex items-center justify-center">
@@ -32,7 +32,7 @@ const InteractiveAvatar = dynamic(() =>
         </div>
       </div>
     ),
-    ssr: false
+    ssr: false,
   }
 );
 
@@ -50,7 +50,7 @@ export default function Page() {
   useEffect(() => {
     // Track page view for analytics
     trackPageView('corporate_chat');
-    
+
     // Store corporate voice preferences
     localStorage.setItem('corporate_voice', voiceConfig.defaultVoice);
     localStorage.setItem('corporate_voice_speed', voiceConfig.speed.toString());
@@ -85,7 +85,7 @@ export default function Page() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           const chunk = decoder.decode(value);
           // Parse streaming response chunks
           const lines = chunk.split('\n');
@@ -115,7 +115,7 @@ export default function Page() {
           <p className="text-muted-foreground mb-4">
             Choose between text-based chat or interact with our AI avatar
           </p>
-          
+
           <Tabs value={chatMode} onValueChange={(value) => setChatMode(value as 'text' | 'avatar')}>
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="text" className="flex items-center gap-2">
@@ -127,22 +127,19 @@ export default function Page() {
                 Avatar Chat
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="text" className="mt-4">
-              <Chat 
-                api="/api/corporate" 
-                chat_url="/corporate/chat" 
-                features_url="/corporate/features" 
+              <Chat
+                api="/api/corporate"
+                chat_url="/corporate/chat"
+                features_url="/corporate/features"
                 how_it_works_url="/corporate/how-it-works"
                 ttsConfig={voiceConfig}
               />
             </TabsContent>
-            
+
             <TabsContent value="avatar" className="mt-4">
-              <InteractiveAvatar 
-                onMessageSend={handleAvatarMessage}
-                className="w-full"
-              />
+              <InteractiveAvatar />
             </TabsContent>
           </Tabs>
         </div>
