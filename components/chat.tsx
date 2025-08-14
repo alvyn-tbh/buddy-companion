@@ -26,7 +26,10 @@ export default function Chat(props: {
     defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
     speed: number;
     autoPlay: boolean;
-  }
+  },
+  hideVoiceModeButton?: boolean,
+  introMessage: string,
+  title?: string,
 }) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -96,7 +99,7 @@ export default function Chat(props: {
 
   // Auto-start conversation for corporate context
   useEffect(() => {
-    if (!hasStartedConversation && messages.length === 0 && props.api === '/api/corporate') {
+    if (!hasStartedConversation && messages.length === 0 && props.api === props.api) {
       // Add a small delay to ensure the chat is ready
       setTimeout(() => {
         const introContent = corporate;
@@ -140,7 +143,7 @@ export default function Chat(props: {
   return (
     <div className="flex-1 flex flex-col w-full max-w-full min-h-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <Header 
-        title="Buddy AI | Corporate Wellness" 
+        title={props.title ?? "Buddy AI | Corporate Wellness"} 
         chat_url={props.chat_url} 
         features_url={props.features_url} 
         how_it_works_url={props.how_it_works_url}
@@ -179,6 +182,7 @@ export default function Chat(props: {
           isAudioEnabled={isAudioEnabled}
           onAudioToggle={setIsAudioEnabled}
           voice={voice}
+          hideVoiceModeButton={props.hideVoiceModeButton}
         />
       </form>
     </div>

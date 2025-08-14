@@ -6,6 +6,7 @@ import { trackPageView } from "@/lib/analytics";
 import { AuthGuard } from '@/components/auth-guard';
 import { Video, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { corporate } from '@/lib/intro-prompt';
 
 // Dynamic import of Chat component to reduce initial bundle size
 const Chat = dynamic(() => import('@/components/chat'), {
@@ -84,6 +85,7 @@ export default function Page() {
                 features_url="/corporate/features"
                 how_it_works_url="/corporate/how-it-works"
                 ttsConfig={voiceConfig}
+                introMessage={corporate}
               />
             </TabsContent>
 

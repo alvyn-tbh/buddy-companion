@@ -15,17 +15,19 @@ interface InputProps {
   isAudioEnabled: boolean;
   onAudioToggle: (enabled: boolean) => void;
   voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  hideVoiceModeButton?: boolean;
 }
 
-export function Textarea({ 
-  handleInputChange, 
-  input, 
-  isLoading, 
-  stop, 
-  handleSubmit, 
-  isAudioEnabled, 
+export function Textarea({
+  handleInputChange,
+  input,
+  isLoading,
+  stop,
+  handleSubmit,
+  isAudioEnabled,
   onAudioToggle,
-  voice = 'alloy'
+  voice = 'alloy',
+  hideVoiceModeButton = false,
 }: InputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -38,7 +40,7 @@ export function Textarea({
   const [isSpeaking, setIsSpeaking] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [noiseFloor, setNoiseFloor] = useState<number>(-50);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -51,7 +53,7 @@ export function Textarea({
   // Initialize RealtimeWebRTC
   useEffect(() => {
     realtimeRef.current = new RealtimeWebRTC();
-    
+
     // Set up event handlers
     realtimeRef.current.on('transcript', (text: string) => {
       setTranscript(text);
@@ -106,7 +108,7 @@ export function Textarea({
       try {
         setIsConnecting(true);
         setConnectionStatus('Creating session...');
-        
+
         if (!realtimeRef.current) {
           realtimeRef.current = new RealtimeWebRTC();
         }
@@ -129,7 +131,7 @@ export function Textarea({
 
         // Connect to OpenAI Realtime
         await realtimeRef.current.connect();
-        
+
         setIsVoiceModeActive(true);
         setTranscript("");
         toast.success("Voice mode activated - Start speaking!");
@@ -195,34 +197,34 @@ export function Textarea({
       // Stop recording and transcribe
       setIsRecording(false);
       setIsTranscribing(true);
-      
+
       // Clear silence timer
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
-      
+
       // Stop media recorder
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
         mediaRecorderRef.current = null;
       }
-      
+
       // Stop stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
         streamRef.current = null;
       }
-      
+
       // Process the recorded audio for transcription
       try {
         // Combine all audio chunks into a single blob
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        
+
         if (audioBlob.size > 0) {
           // Transcribe using OpenAI API
           const transcription = await transcribeAudioWithOpenAI(audioBlob);
-          
+
           if (transcription.trim()) {
             handleInputChange({ target: { value: transcription.trim() } });
             toast.success("Transcription completed!");
@@ -240,27 +242,27 @@ export function Textarea({
         isProcessingRef.current = false;
         audioChunksRef.current = [];
       }
-      
+
       return;
     }
 
     // Start recording
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
-        } 
+        }
       });
-      
+
       streamRef.current = stream;
       audioChunksRef.current = [];
       setRecordingStartTime(Date.now());
 
       // Start MediaRecorder
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
         : 'audio/webm';
 
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
@@ -278,7 +280,7 @@ export function Textarea({
 
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
-      
+
       // Start silence detection timer
       silenceTimerRef.current = setTimeout(() => {
         if (isRecording) {
@@ -286,7 +288,7 @@ export function Textarea({
           handleMicClick(); // Stop recording
         }
       }, silenceThreshold);
-      
+
       toast.success("Recording started... Speak now!");
     } catch (error) {
       console.error("Error starting recording:", error);
@@ -297,7 +299,7 @@ export function Textarea({
 
   const toggleAudio = useCallback(() => {
     onAudioToggle(!isAudioEnabled);
-    toast.info(!isAudioEnabled ? "Audio enabled" : "Audio disabled");
+    toast.info(isAudioEnabled ? "Audio disabled" : "Audio enabled");
   }, [isAudioEnabled, onAudioToggle]);
 
   // Check for maximum recording time
@@ -352,31 +354,33 @@ export function Textarea({
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
         {/* Voice Mode Button */}
-        <div className="relative">
-          <Button
-            variant={isVoiceModeActive ? "default" : "ghost"}
-            size="icon"
-            className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
-            onClick={toggleVoiceMode}
-            disabled={isLoading || isRecording || isTranscribing || isConnecting}
-            title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
-          >
-            {isVoiceModeActive ? (
-              <Square className="h-5 w-5 text-white" />
-            ) : isConnecting ? (
-              <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Radio className="h-5 w-5" />
+        {!hideVoiceModeButton && (
+          <div className="relative">
+            <Button
+              variant={isVoiceModeActive ? "default" : "ghost"}
+              size="icon"
+              className={`h-8 w-8 ${isVoiceModeActive ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+              onClick={toggleVoiceMode}
+              disabled={isLoading || isRecording || isTranscribing || isConnecting}
+              title={isVoiceModeActive ? "Stop voice mode" : "Start voice mode"}
+            >
+              {isVoiceModeActive ? (
+                <Square className="h-5 w-5 text-white" />
+              ) : isConnecting ? (
+                <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Radio className="h-5 w-5" />
+              )}
+            </Button>
+            {isVoiceModeActive && connectionStatus === 'Connected' && (
+              <MiniVoiceIndicator
+                isSpeaking={isSpeaking}
+                volume={volume}
+                className="absolute -top-1 -right-1"
+              />
             )}
-          </Button>
-          {isVoiceModeActive && connectionStatus === 'Connected' && (
-            <MiniVoiceIndicator
-              isSpeaking={isSpeaking}
-              volume={volume}
-              className="absolute -top-1 -right-1"
-            />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Audio Toggle Button */}
         <Button
