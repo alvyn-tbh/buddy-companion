@@ -67,28 +67,28 @@ const StreamingAvatarContext = React.createContext<StreamingAvatarContextProps>(
   {
     avatarRef: { current: null },
     isMuted: true,
-    setIsMuted: () => {},
+    setIsMuted: () => { },
     isVoiceChatLoading: false,
-    setIsVoiceChatLoading: () => {},
+    setIsVoiceChatLoading: () => { },
     sessionState: StreamingAvatarSessionState.INACTIVE,
-    setSessionState: () => {},
+    setSessionState: () => { },
     isVoiceChatActive: false,
-    setIsVoiceChatActive: () => {},
+    setIsVoiceChatActive: () => { },
     stream: null,
-    setStream: () => {},
+    setStream: () => { },
     messages: [],
-    clearMessages: () => {},
-    handleUserTalkingMessage: () => {},
-    handleStreamingTalkingMessage: () => {},
-    handleEndMessage: () => {},
+    clearMessages: () => { },
+    handleUserTalkingMessage: () => { },
+    handleStreamingTalkingMessage: () => { },
+    handleEndMessage: () => { },
     isListening: false,
-    setIsListening: () => {},
+    setIsListening: () => { },
     isUserTalking: false,
-    setIsUserTalking: () => {},
+    setIsUserTalking: () => { },
     isAvatarTalking: false,
-    setIsAvatarTalking: () => {},
+    setIsAvatarTalking: () => { },
     connectionQuality: ConnectionQuality.UNKNOWN,
-    setConnectionQuality: () => {},
+    setConnectionQuality: () => { },
   },
 );
 
@@ -128,13 +128,16 @@ const useStreamingAvatarMessageState = () => {
     setMessages([]);
   };
 
+  const generateMessageId = () =>
+    `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
   const handleUserTalkingMessage = ({
     detail,
   }: {
     detail: UserTalkingMessageEvent;
   }) => {
     const message: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       sender: MessageSender.CLIENT,
       content: detail.message,
     };
@@ -148,7 +151,7 @@ const useStreamingAvatarMessageState = () => {
     detail: StreamingTalkingMessageEvent;
   }) => {
     const message: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       sender: MessageSender.AVATAR,
       content: detail.message,
     };
@@ -244,4 +247,4 @@ export const useStreamingAvatarContext = () => {
     );
   }
   return context;
-}; 
+};

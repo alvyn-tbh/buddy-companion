@@ -8,14 +8,14 @@ const OPENAI_PRICING = {
   'gpt-4-turbo': { input: 0.01, output: 0.03 },
   'gpt-4': { input: 0.03, output: 0.06 },
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
-  
+
   // TTS Models (per 1K characters)
   'tts-1': { input: 0.015 },
   'tts-1-hd': { input: 0.03 },
-  
+
   // Whisper (per minute)
   'whisper-1': { input: 0.006 },
-  
+
   // DALL-E (per image)
   'dall-e-3': { input: 0.04 },
   'dall-e-2': { input: 0.02 },
@@ -54,19 +54,19 @@ export class UsageTracker {
           cost = (inputTokens * pricing.input + outputTokens * pricing.output) / 1000;
         }
         break;
-      
+
       case 'tts':
         if (data.characters_used) {
           cost = (data.characters_used * pricing.input) / 1000;
         }
         break;
-      
+
       case 'transcription':
         if (data.minutes_used) {
           cost = data.minutes_used * pricing.input;
         }
         break;
-      
+
       case 'speech':
         // Speech-to-speech might use both transcription and TTS
         if (data.minutes_used) {
@@ -87,7 +87,7 @@ export class UsageTracker {
     try {
       const supabase = await createClient();
       const cost = this.calculateCost(data);
-      
+
       if (cost <= 0) {
         console.warn('Usage cost is 0 or negative, skipping tracking');
         return;
@@ -195,4 +195,4 @@ export class UsageTracker {
 }
 
 // Export singleton instance
-export const usageTracker = new UsageTracker(); 
+export const usageTracker = new UsageTracker();

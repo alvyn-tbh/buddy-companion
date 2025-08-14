@@ -31,11 +31,11 @@ interface SpeechRecognition extends EventTarget {
   interimResults: boolean;
   lang: string;
   maxAlternatives: number;
-  
+
   start(): void;
   stop(): void;
   abort(): void;
-  
+
   onstart: ((this: SpeechRecognition, ev: Event) => unknown) | null;
   onend: ((this: SpeechRecognition, ev: Event) => unknown) | null;
   onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => unknown) | null;

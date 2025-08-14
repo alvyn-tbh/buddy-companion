@@ -8,17 +8,17 @@ const ADMIN_LOGIN = '/admin/login';
 const PROTECTED_CHAT_ROUTES = new Set([
   '/corporate/chat',
   '/travel/chat',
-  '/emotional/chat', 
+  '/emotional/chat',
   '/culture/chat'
 ]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Fast path: Skip processing for static assets and API routes
-  if (pathname.startsWith('/_next/') || 
-      pathname.startsWith('/api/') || 
-      pathname === '/favicon.ico') {
+  if (pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/') ||
+    pathname === '/favicon.ico') {
     return NextResponse.next();
   }
 
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith(ADMIN_PREFIX) && !pathname.startsWith(ADMIN_LOGIN)) {
     // Check if user is authenticated for admin
     const isAuthenticated = request.cookies.get('admin-auth');
-    
+
     if (!isAuthenticated) {
       // Redirect to login page
       const loginUrl = new URL(ADMIN_LOGIN, request.url);
@@ -46,13 +46,13 @@ export async function middleware(request: NextRequest) {
     // But for now, we'll just pass through to avoid edge runtime issues
     return NextResponse.next();
   }
-  
+
   // Add performance headers
   const response = NextResponse.next();
-  
+
   // Add timing header for performance monitoring
   response.headers.set('X-Middleware-Time', Date.now().toString());
-  
+
   return response;
 }
 
