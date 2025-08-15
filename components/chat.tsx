@@ -99,26 +99,24 @@ export default function Chat(props: {
 
   // Auto-start conversation for corporate context
   useEffect(() => {
-    if (!hasStartedConversation && messages.length === 0 && props.api === props.api) {
+    if (!hasStartedConversation && messages.length === 0) {
       // Add a small delay to ensure the chat is ready
       setTimeout(() => {
-        const introContent = corporate;
-        
         setIntroMessage({
           id: 'intro-message',
           role: 'assistant',
-          content: introContent,
+          content: props.introMessage,
           parts: [
             {
               type: 'text',
-              text: introContent
+              text: props.introMessage
             }
           ]
         });
         setHasStartedConversation(true);
       }, 500);
     }
-  }, [hasStartedConversation, messages.length, props.api]);
+  }, [hasStartedConversation, messages.length, props.introMessage]);
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -143,7 +141,7 @@ export default function Chat(props: {
   return (
     <div className="flex-1 flex flex-col w-full max-w-full min-h-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <Header 
-        title={props.title ?? "Buddy AI | Corporate Wellness"} 
+        title={props.title ?? "Buddy AI"} 
         chat_url={props.chat_url} 
         features_url={props.features_url} 
         how_it_works_url={props.how_it_works_url}
