@@ -41,6 +41,7 @@ export { MotionDiv, MotionSection, AnimatePresence };
 export function createMotionComponent(element: string) {
   return dynamic(
     () => import('framer-motion').then((mod) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (mod.motion as any)[element];
     }),
     { ssr: false }
