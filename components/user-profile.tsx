@@ -43,7 +43,7 @@ export function UserProfile({ className = '' }: UserProfileProps) {
   };
 
   const getInitials = (name?: string) => {
-    if (!name) return 'U';
+    if (!name) { return 'U' };
     return name
       .split(' ')
       .map(word => word[0])

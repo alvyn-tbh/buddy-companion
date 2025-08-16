@@ -17,10 +17,10 @@ import { corporate } from "@/lib/intro-prompt";
 //   content: string;
 // }
 
-export default function Chat(props: { 
-  api: string, 
-  chat_url: string, 
-  features_url: string, 
+export default function Chat(props: {
+  api: string,
+  chat_url: string,
+  features_url: string,
   how_it_works_url: string,
   ttsConfig?: {
     defaultVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
@@ -65,13 +65,13 @@ export default function Chat(props: {
       },
       onError: (error) => {
         console.error('Chat error:', error);
-        
+
         // Check if it's a rate limit error
         const errorMessage = error.message || '';
-        const isRateLimitError = errorMessage.includes('rate limit') || 
-                                errorMessage.includes('quota') || 
-                                errorMessage.includes('exceeded');
-        
+        const isRateLimitError = errorMessage.includes('rate limit') ||
+          errorMessage.includes('quota') ||
+          errorMessage.includes('exceeded');
+
         if (isRateLimitError) {
           toast.error(
             "OpenAI API Rate Limit Exceeded",
@@ -140,10 +140,10 @@ export default function Chat(props: {
 
   return (
     <div className="flex-1 flex flex-col w-full max-w-full min-h-0 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <Header 
-        title={props.title ?? "Buddy AI"} 
-        chat_url={props.chat_url} 
-        features_url={props.features_url} 
+      <Header
+        title={props.title ?? "Buddy AI"}
+        chat_url={props.chat_url}
+        features_url={props.features_url}
         how_it_works_url={props.how_it_works_url}
         isAudioEnabled={isAudioEnabled}
         onAudioToggle={setIsAudioEnabled}
@@ -159,10 +159,10 @@ export default function Chat(props: {
             </div>
           </div>
         ) : (
-          <Messages 
-            messages={displayMessages} 
-            isLoading={isLoading} 
-            status={status} 
+          <Messages
+            messages={displayMessages}
+            isLoading={isLoading}
+            status={status}
           />
         )}
       </div>

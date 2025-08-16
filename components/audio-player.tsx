@@ -175,7 +175,7 @@ export function AudioPlayer({
   }, [isPlaying, stopSpeaking]);
 
   // Prevent rendering if no text
-  if (!text.trim()) return null;
+  if (!text.trim()) { return null };
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

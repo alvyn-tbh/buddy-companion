@@ -46,7 +46,7 @@ export function AudioSettings({
 
   const handleAudioToggle = () => {
     onAudioToggle(!isAudioEnabled);
-    toast.info(!isAudioEnabled ? "Audio enabled" : "Audio disabled");
+    toast.info(isAudioEnabled ? "Audio disabled" : "Audio enabled");
   };
 
   const handleVoiceChange = (voice: string) => {
