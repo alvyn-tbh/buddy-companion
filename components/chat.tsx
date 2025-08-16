@@ -9,13 +9,6 @@ import Header from "./sub-header";
 import { toast } from "sonner";
 import { SuggestedPrompts } from "./suggested-prompts";
 import type { Message as TMessage } from "ai";
-import { corporate } from "@/lib/intro-prompt";
-
-// interface Message {
-//   id: string;
-//   role: "system" | "user" | "assistant" | "data";
-//   content: string;
-// }
 
 export default function Chat(props: {
   api: string,
