@@ -7,12 +7,12 @@ export const useConversationState = () => {
         useStreamingAvatarContext();
 
     const startListening = useCallback(() => {
-        if (!avatarRef.current) return;
+        if (!avatarRef.current) { return };
         avatarRef.current.startListening();
     }, [avatarRef]);
 
     const stopListening = useCallback(() => {
-        if (!avatarRef.current) return;
+        if (!avatarRef.current) { return };
         avatarRef.current.stopListening();
     }, [avatarRef]);
 

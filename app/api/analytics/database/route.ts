@@ -6,9 +6,9 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const { total_size_bytes, table_count, active_connections, cache_hit_ratio } = await request.json();
-    
-    if (typeof total_size_bytes !== 'number' || typeof table_count !== 'number' || 
-        typeof active_connections !== 'number' || typeof cache_hit_ratio !== 'number') {
+
+    if (typeof total_size_bytes !== 'number' || typeof table_count !== 'number' ||
+      typeof active_connections !== 'number' || typeof cache_hit_ratio !== 'number') {
       return NextResponse.json(
         { error: 'Missing or invalid required fields' },
         { status: 400 }
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data,
-      message: 'Database metric stored successfully' 
+      message: 'Database metric stored successfully'
     });
 
   } catch (error) {
@@ -107,4 +107,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

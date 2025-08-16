@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email) {
       toast.error('Please enter your email address');
       return;
@@ -62,8 +62,8 @@ export default function ForgotPasswordPage() {
             </Button>
 
             <div className="text-center">
-              <Link 
-                href="/auth" 
+              <Link
+                href="/auth"
                 className="text-sm text-blue-600 hover:text-blue-800 underline"
               >
                 Back to sign in
@@ -74,4 +74,4 @@ export default function ForgotPasswordPage() {
       </Card>
     </div>
   );
-} 
+}

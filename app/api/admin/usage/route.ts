@@ -4,11 +4,11 @@ import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    
+
     // Check if user is admin using cookie-based auth
     const cookieStore = await cookies();
     const adminAuthCookie = cookieStore.get('admin-auth')?.value;
-    
+
     if (!adminAuthCookie) {
       console.log('No admin auth cookie found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

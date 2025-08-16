@@ -11,7 +11,7 @@ export const MessageHistory: React.FC = () => {
   useEffect(() => {
     const container = containerRef.current;
 
-    if (!container || messages.length === 0) return;
+    if (!container || messages.length === 0) { return };
 
     container.scrollTop = container.scrollHeight;
   }, [messages]);

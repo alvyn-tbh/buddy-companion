@@ -155,4 +155,4 @@ export const useStreamingAvatarSession = () => {
     startAvatar: start,
     stopAvatar: stop,
   };
-}; 
+};

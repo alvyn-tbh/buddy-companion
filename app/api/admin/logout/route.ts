@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
-  
+
   // Clear the authentication cookie
   response.cookies.set('admin-auth', '', {
     httpOnly: true,

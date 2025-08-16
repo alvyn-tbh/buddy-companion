@@ -6,7 +6,7 @@ export const useInterrupt = () => {
     const { avatarRef } = useStreamingAvatarContext();
 
     const interrupt = useCallback(() => {
-        if (!avatarRef.current) return;
+        if (!avatarRef.current) { return };
         avatarRef.current.interrupt();
     }, [avatarRef]);
 

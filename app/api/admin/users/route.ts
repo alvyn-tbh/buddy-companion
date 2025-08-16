@@ -6,7 +6,7 @@ export async function GET() {
     // Check if user is admin using cookie-based auth
     const cookieStore = await cookies();
     const adminAuthCookie = cookieStore.get('admin-auth')?.value;
-    
+
     if (!adminAuthCookie) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Track usage
     const requestId = `transcribe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Calculate duration in minutes (estimate based on file size if not available)
     let durationMinutes = 0;
     if (responseFormat === 'verbose_json') {
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Transcription error:', error);
-    
+
     // Handle specific OpenAI errors
     if (error instanceof Error) {
       if (error.message.includes('authentication')) {
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    
+
     return NextResponse.json(
       { error: 'Transcription failed', details: 'An unexpected error occurred' },
       { status: 500 }

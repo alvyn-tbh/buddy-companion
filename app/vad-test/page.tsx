@@ -21,7 +21,7 @@ export default function VADTestPage() {
     noiseFloorAdaptation: true,
     adaptationSpeed: 0.02
   });
-  
+
   const vadRef = useRef<AdvancedVoiceActivityDetector | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -36,9 +36,9 @@ export default function VADTestPage() {
           channelCount: 1
         }
       });
-      
+
       streamRef.current = stream;
-      
+
       vadRef.current = new AdvancedVoiceActivityDetector(vadConfig, {
         onSpeechStart: () => {
           setIsSpeaking(true);
@@ -56,7 +56,7 @@ export default function VADTestPage() {
           console.log('Noise floor updated:', nf);
         }
       });
-      
+
       await vadRef.current.start(stream);
       setIsListening(true);
     } catch (error) {
@@ -70,12 +70,12 @@ export default function VADTestPage() {
       vadRef.current.stop();
       vadRef.current = null;
     }
-    
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    
+
     setIsListening(false);
     setIsSpeaking(false);
   };
@@ -83,7 +83,7 @@ export default function VADTestPage() {
   const updateConfig = (key: keyof VADConfig, value: string | number | boolean) => {
     const newConfig = { ...vadConfig, [key]: value };
     setVadConfig(newConfig);
-    
+
     if (vadRef.current) {
       vadRef.current.setConfig({ [key]: value });
     }
@@ -146,7 +146,7 @@ export default function VADTestPage() {
               <CardContent>
                 <div className="text-2xl font-mono">{volume.toFixed(1)} dB</div>
                 <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-blue-500 transition-all duration-100"
                     style={{ width: `${Math.max(0, Math.min(100, (volume + 90) * 1.11))}%` }}
                   />

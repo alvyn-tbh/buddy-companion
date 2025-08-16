@@ -68,4 +68,4 @@ export default function HowItWorksPage() {
       <Footer />
     </div>
   );
-} 
+}

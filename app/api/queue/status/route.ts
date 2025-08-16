@@ -17,21 +17,21 @@ interface QueueStats {
 // JWT verification function (same as in auth route)
 function verifyToken(token: string): boolean {
   try {
-    const JWT_SECRET = process.env.JWT_SECRET;
+    const { JWT_SECRET } = process.env;
     if (!JWT_SECRET) {
       console.error('JWT_SECRET is not configured');
       return false;
     }
-    
+
     const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    
+    if (parts.length !== 3) { return false };
+
     const [header, payload, signature] = parts;
     const expectedSignature = crypto
       .createHmac('sha256', JWT_SECRET)
       .update(`${header}.${payload}`)
       .digest('base64url');
-    
+
     return signature === expectedSignature;
   } catch {
     return false;
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   try {
     // Check authentication
     const token = request.cookies.get('admin-auth')?.value;
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     // Check Redis health with better error handling
     let redisHealth = false;
     let redisInfo = { url: 'unknown', isConnected: false, isInitialized: false };
-    
+
     try {
       redisHealth = await redisHealthCheck();
       redisInfo = getRedisInfo();
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         isInitialized: false,
       };
     }
-    
+
     // Get queue statistics (only if Redis is healthy)
     let queueStats: Record<string, QueueStats> = {};
     let summary = {
@@ -75,11 +75,11 @@ export async function GET(request: NextRequest) {
       totalCompleted: 0,
       totalFailed: 0,
     };
-    
+
     if (redisHealth) {
       try {
         queueStats = await getQueueStats() as Record<string, QueueStats>;
-        
+
         // Calculate summary statistics
         summary = {
           totalWaiting: Object.values(queueStats).reduce((sum: number, queue) => sum + queue.waiting.length, 0),
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         // Continue with empty stats
       }
     }
-    
+
     const status = {
       timestamp: new Date().toISOString(),
       redis: {
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         nodeVersion: process.version,
       },
     };
-    
+
     return NextResponse.json(status, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -116,11 +116,11 @@ export async function GET(request: NextRequest) {
         'Expires': '0',
       },
     });
-    
+
   } catch (error) {
     console.error('Error getting queue status:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to get queue status',
         details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString(),

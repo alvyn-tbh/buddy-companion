@@ -8,7 +8,7 @@ export const useTextChat = () => {
 
     const sendMessage = useCallback(
         (message: string) => {
-            if (!avatarRef.current) return;
+            if (!avatarRef.current) { return };
             avatarRef.current.speak({
                 text: message,
                 taskType: TaskType.TALK,
@@ -20,7 +20,7 @@ export const useTextChat = () => {
 
     const sendMessageSync = useCallback(
         async (message: string) => {
-            if (!avatarRef.current) return;
+            if (!avatarRef.current) { return };
 
             return await avatarRef.current?.speak({
                 text: message,
@@ -33,7 +33,7 @@ export const useTextChat = () => {
 
     const repeatMessage = useCallback(
         (message: string) => {
-            if (!avatarRef.current) return;
+            if (!avatarRef.current) { return };
 
             return avatarRef.current?.speak({
                 text: message,
@@ -46,7 +46,7 @@ export const useTextChat = () => {
 
     const repeatMessageSync = useCallback(
         async (message: string) => {
-            if (!avatarRef.current) return;
+            if (!avatarRef.current) { return };
 
             return await avatarRef.current?.speak({
                 text: message,

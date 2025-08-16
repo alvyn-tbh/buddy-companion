@@ -90,7 +90,7 @@ export default function UsageDashboard() {
   }, [fetchUsageStats]);
 
   const calculatePercentageChange = (current: number, previous: number): number => {
-    if (previous === 0) return current > 0 ? 100 : 0;
+    if (previous === 0) { return current > 0 ? 100 : 0 };
     return ((current - previous) / previous) * 100;
   };
 
@@ -104,14 +104,14 @@ export default function UsageDashboard() {
   };
 
   const getTrendIcon = (percentage: number) => {
-    if (percentage > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (percentage < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    if (percentage > 0) { return <TrendingUp className="h-4 w-4 text-green-600" /> };
+    if (percentage < 0) { return <TrendingDown className="h-4 w-4 text-red-600" /> };
     return <Activity className="h-4 w-4 text-gray-600" />;
   };
 
   const getTrendColor = (percentage: number) => {
-    if (percentage > 0) return 'text-green-600';
-    if (percentage < 0) return 'text-red-600';
+    if (percentage > 0) { return 'text-green-600' };
+    if (percentage < 0) { return 'text-red-600' };
     return 'text-gray-600';
   };
 

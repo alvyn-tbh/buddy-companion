@@ -1,4 +1,4 @@
-const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY;
+const { HEYGEN_API_KEY } = process.env;
 
 export async function POST() {
   console.log('🔍 [HeyGen API] Access token request received');

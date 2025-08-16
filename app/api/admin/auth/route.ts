@@ -4,9 +4,7 @@ import crypto from 'crypto';
 export const runtime = 'nodejs';
 
 // Validate environment variables
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const JWT_SECRET = process.env.JWT_SECRET;
+const { ADMIN_USERNAME, ADMIN_PASSWORD, JWT_SECRET } = process.env;
 
 // Check if required environment variables are set
 if (!ADMIN_USERNAME || !ADMIN_PASSWORD || !JWT_SECRET) {
@@ -30,16 +28,16 @@ function generateToken(payload: JWTPayload): string {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
   }
-  
+
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  
+
   const signature = crypto
     .createHmac('sha256', JWT_SECRET)
     .update(`${encodedHeader}.${encodedPayload}`)
     .digest('base64url');
-  
+
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
 
@@ -48,16 +46,16 @@ function verifyToken(token: string): boolean {
     if (!JWT_SECRET) {
       return false;
     }
-    
+
     const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    
+    if (parts.length !== 3) { return false };
+
     const [header, payload, signature] = parts;
     const expectedSignature = crypto
       .createHmac('sha256', JWT_SECRET)
       .update(`${header}.${payload}`)
       .digest('base64url');
-    
+
     return signature === expectedSignature;
   } catch {
     return false;
@@ -87,7 +85,7 @@ export async function POST(request: NextRequest) {
 
       // Set secure cookie
       const response = NextResponse.json({ success: true });
-      
+
       response.cookies.set('admin-auth', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -115,11 +113,11 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('admin-auth')?.value;
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ authenticated: false });
     }
-    
+
     return NextResponse.json({ authenticated: true });
   } catch (error) {
     console.error('Auth check error:', error);

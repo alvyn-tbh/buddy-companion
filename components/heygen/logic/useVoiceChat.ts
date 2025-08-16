@@ -15,7 +15,7 @@ export const useVoiceChat = () => {
 
   const startVoiceChat = useCallback(
     async (isInputAudioMuted?: boolean) => {
-      if (!avatarRef.current) return;
+      if (!avatarRef.current) { return };
       setIsVoiceChatLoading(true);
       await avatarRef.current?.startVoiceChat({
         isInputAudioMuted,
@@ -28,20 +28,20 @@ export const useVoiceChat = () => {
   );
 
   const stopVoiceChat = useCallback(() => {
-    if (!avatarRef.current) return;
+    if (!avatarRef.current) { return };
     avatarRef.current?.closeVoiceChat();
     setIsVoiceChatActive(false);
     setIsMuted(true);
   }, [avatarRef, setIsMuted, setIsVoiceChatActive]);
 
   const muteInputAudio = useCallback(() => {
-    if (!avatarRef.current) return;
+    if (!avatarRef.current) { return };
     avatarRef.current?.muteInputAudio();
     setIsMuted(true);
   }, [avatarRef, setIsMuted]);
 
   const unmuteInputAudio = useCallback(() => {
-    if (!avatarRef.current) return;
+    if (!avatarRef.current) { return };
     avatarRef.current?.unmuteInputAudio();
     setIsMuted(false);
   }, [avatarRef, setIsMuted]);
@@ -55,4 +55,4 @@ export const useVoiceChat = () => {
     isVoiceChatActive,
     isVoiceChatLoading,
   };
-}; 
+};

@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -114,4 +114,4 @@ export default function ResetPasswordPage() {
       </Card>
     </div>
   );
-} 
+}

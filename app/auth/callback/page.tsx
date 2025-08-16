@@ -18,7 +18,7 @@ export default function AuthCallbackPage() {
       try {
         const supabase = createClient();
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Auth callback error:', error);
           setError(error.message);
@@ -30,7 +30,7 @@ export default function AuthCallbackPage() {
         if (data.session) {
           setStatus('success');
           toast.success('Successfully signed in!');
-          
+
           // Redirect to the main page or dashboard
           setTimeout(() => {
             router.push('/');
@@ -108,4 +108,4 @@ export default function AuthCallbackPage() {
       </Card>
     </div>
   );
-} 
+}

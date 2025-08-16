@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const { service_used, visitor_id, session_id } = await request.json();
-    
+
     if (!service_used || !visitor_id || !session_id) {
       return NextResponse.json(
         { error: 'Missing required fields: service_used, visitor_id, session_id' },
@@ -50,23 +50,23 @@ export async function POST(request: NextRequest) {
       if (error) {
         console.error('Error inserting engagement metric:', error);
         // Don't return 500 error, just log and continue
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Analytics tracking failed but continuing' 
+        return NextResponse.json({
+          success: false,
+          message: 'Analytics tracking failed but continuing'
         });
       }
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         data,
-        message: 'Engagement tracked successfully' 
+        message: 'Engagement tracked successfully'
       });
     } catch (dbError) {
       console.error('Database connection error:', dbError);
       // Return success even if database fails to prevent client errors
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Analytics service temporarily unavailable' 
+      return NextResponse.json({
+        success: false,
+        message: 'Analytics service temporarily unavailable'
       });
     }
 
@@ -117,4 +117,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

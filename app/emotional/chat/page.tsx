@@ -86,7 +86,7 @@ export default function Page() {
                                 how_it_works_url="/emotional/how-it-works"
                                 ttsConfig={voiceConfig}
                                 introMessage={emotional}
-                title="Buddy AI | Emotional Wellness"
+                                title="Buddy AI | Emotional Support"
                                 hideVoiceModeButton
                             />
                         </TabsContent>

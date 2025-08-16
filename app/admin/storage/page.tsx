@@ -105,15 +105,15 @@ export default function StorageDashboard() {
   }, [fetchDatabaseData]);
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) { return '0 Bytes' };
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
   const formatPercentage = (value: number) => {
-    return (value * 100).toFixed(2) + '%';
+    return `${(value * 100).toFixed(2)}%`;
   };
 
   const getTrendIcon = (trend: string) => {
@@ -143,16 +143,16 @@ export default function StorageDashboard() {
   };
 
   const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    if (percentage >= 50) return 'bg-blue-500';
+    if (percentage >= 90) { return 'bg-red-500' };
+    if (percentage >= 75) { return 'bg-yellow-500' };
+    if (percentage >= 50) { return 'bg-blue-500' };
     return 'bg-green-500';
   };
 
   const getUsageTextColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-red-600';
-    if (percentage >= 75) return 'text-yellow-600';
-    if (percentage >= 50) return 'text-blue-600';
+    if (percentage >= 90) { return 'text-red-600' };
+    if (percentage >= 75) { return 'text-yellow-600' };
+    if (percentage >= 50) { return 'text-blue-600' };
     return 'text-green-600';
   };
 
@@ -275,8 +275,8 @@ export default function StorageDashboard() {
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600">Storage Status</p>
                   <p className={`text-lg font-semibold ${usagePercentage >= 90 ? 'text-red-600' :
-                      usagePercentage >= 75 ? 'text-yellow-600' :
-                        'text-green-600'
+                    usagePercentage >= 75 ? 'text-yellow-600' :
+                      'text-green-600'
                     }`}>
                     {usagePercentage >= 90 ? 'Critical' :
                       usagePercentage >= 75 ? 'Warning' :
@@ -368,8 +368,8 @@ export default function StorageDashboard() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Size Difference</span>
                       <span className={`font-semibold ${databaseData.latest_total_size_bytes > databaseData.avg_total_size_bytes
-                          ? 'text-red-600'
-                          : 'text-green-600'
+                        ? 'text-red-600'
+                        : 'text-green-600'
                         }`}>
                         {databaseData.latest_total_size_bytes > databaseData.avg_total_size_bytes ? '+' : ''}
                         {formatBytes(databaseData.latest_total_size_bytes - databaseData.avg_total_size_bytes)}
@@ -489,8 +489,8 @@ export default function StorageDashboard() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Storage Status:</span>
                     <span className={`text-sm font-semibold ${usagePercentage >= 90 ? 'text-red-600' :
-                        usagePercentage >= 75 ? 'text-yellow-600' :
-                          'text-green-600'
+                      usagePercentage >= 75 ? 'text-yellow-600' :
+                        'text-green-600'
                       }`}>
                       {usagePercentage >= 90 ? 'Critical' :
                         usagePercentage >= 75 ? 'Warning' :

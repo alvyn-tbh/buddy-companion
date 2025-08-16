@@ -39,7 +39,7 @@ export function AuthForm({ onSuccess, defaultTab = 'signin', className = '' }: A
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (signUpData.password !== signUpData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -63,7 +63,7 @@ export function AuthForm({ onSuccess, defaultTab = 'signin', className = '' }: A
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     await signIn({
       email: signInData.email,
       password: signInData.password,
@@ -89,8 +89,8 @@ export function AuthForm({ onSuccess, defaultTab = 'signin', className = '' }: A
           {activeTab === 'signin' ? 'Welcome back' : 'Create account'}
         </CardTitle>
         <CardDescription className="text-center">
-          {activeTab === 'signin' 
-            ? 'Enter your credentials to access your account' 
+          {activeTab === 'signin'
+            ? 'Enter your credentials to access your account'
             : 'Enter your details to create your account'
           }
         </CardDescription>
@@ -310,4 +310,4 @@ export function AuthForm({ onSuccess, defaultTab = 'signin', className = '' }: A
       </CardContent>
     </Card>
   );
-} 
+}

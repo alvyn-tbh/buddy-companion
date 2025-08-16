@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!process.env.OPENAI_API_KEY) {
       console.error('OpenAI API key is not configured');
       return NextResponse.json(
-        { 
+        {
           error: 'OpenAI API key is not configured',
           details: 'Please set the OPENAI_API_KEY environment variable'
         },
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       validateTTSOptions({ voice, model, speed, format });
     } catch (validationError) {
       return NextResponse.json(
-        { 
+        {
           error: 'Invalid TTS options',
           details: validationError instanceof Error ? validationError.message : 'Unknown validation error'
         },
@@ -91,14 +91,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('TTS API error:', error);
-    
+
     // Provide more specific error messages
     let errorMessage = 'TTS failed';
     let errorDetails = 'Unknown error';
-    
+
     if (error instanceof Error) {
       errorDetails = error.message;
-      
+
       // Check for specific OpenAI API errors
       if (error.message.includes('invalid_request_error')) {
         errorMessage = 'Invalid request to OpenAI API';
@@ -114,9 +114,9 @@ export async function POST(request: NextRequest) {
         errorDetails = 'Please check your OpenAI account usage';
       }
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         details: errorDetails
       },
@@ -135,4 +135,4 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
-} 
+}

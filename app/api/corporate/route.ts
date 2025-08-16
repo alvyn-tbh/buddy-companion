@@ -46,24 +46,24 @@ export async function POST(request: NextRequest) {
     const userMessages = messages.filter(m => m.role === 'user');
 
     // Helper functions
-    function extractName(text: string) {
+    const extractName = (text: string) => {
       // Look for "my name is ..." or "I am ..." or "I'm ..."
       const nameMatch = text.match(/(?:my name is|i am|i\'m|i’m)\s+([A-Za-z ]+)/i);
-      if (nameMatch) return nameMatch[1].trim().split(' ')[0];
+      if (nameMatch) { return nameMatch[1].trim().split(' ')[0] };
       // Fallback: if user just types a single word
-      if (text.trim().split(' ').length === 1 && text.trim().length > 1) return text.trim();
+      if (text.trim().split(' ').length === 1 && text.trim().length > 1) { return text.trim() };
       return null;
     }
-    function extractCompany(text: string) {
+    const extractCompany = (text: string) => {
       // Look for "company is ..." or "at ..." or "from ..."
       const companyMatch = text.match(/(?:company is|at|from)\s+([A-Za-z0-9 &]+)/i);
-      if (companyMatch) return companyMatch[1].trim();
+      if (companyMatch) { return companyMatch[1].trim() };
       return null;
     }
-    function extractRole(text: string) {
+    const extractRole = (text: string) => {
       // Look for "role is ..." or "I am a ..." or "I work as ..."
       const roleMatch = text.match(/(?:role is|i am a|i work as|i’m a|i\'m a)\s+([A-Za-z ]+)/i);
-      if (roleMatch) return roleMatch[1].trim();
+      if (roleMatch) { return roleMatch[1].trim() };
       return null;
     }
 
@@ -72,18 +72,18 @@ export async function POST(request: NextRequest) {
     let companyName = null;
     let userRole = null;
     for (const msg of userMessages) {
-      if (!userName) userName = extractName(msg.content);
-      if (!companyName) companyName = extractCompany(msg.content);
-      if (!userRole) userRole = extractRole(msg.content);
+      if (!userName) { userName = extractName(msg.content) };
+      if (!companyName) { companyName = extractCompany(msg.content) };
+      if (!userRole) { userRole = extractRole(msg.content) };
     }
 
     // Check if this is the first message (only system message exists)
     const isFirstMessage = messages.length === 1 && messages[0].role === 'system';
-    
+
     if (isFirstMessage) {
       // Send introductory message
       const introMessage = corporateIntro;
-      
+
       return new Response(
         `0:"${introMessage}"\n`,
         {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Track usage
     const requestId = `corporate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // We'll track usage after the response is complete
     let totalTokens = 0;
     let responseContent = '';
@@ -138,16 +138,16 @@ export async function POST(request: NextRequest) {
                 .replace(/\n/g, '\\n')
                 .replace(/\r/g, '\\r')
                 .replace(/\t/g, '\\t');
-              
+
               controller.enqueue(new TextEncoder().encode(`0:"${escapedContent}"\n`));
             }
-            
+
             // Track tokens from usage
             if (chunk.usage?.total_tokens) {
               totalTokens = chunk.usage.total_tokens;
             }
           }
-          
+
           // Track usage after response is complete
           if (totalTokens > 0) {
             await usageTracker.trackUsage({
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
               },
             });
           }
-          
+
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
@@ -181,13 +181,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in API:', error);
-    
+
     // Handle specific OpenAI errors
     let userFriendlyMessage = 'An unexpected error occurred';
-    
+
     if (error instanceof Error) {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('rate_limit_exceeded') || errorMessage.includes('quota')) {
         userFriendlyMessage = 'OpenAI API rate limit exceeded. You have exceeded your current quota. Please check your plan and billing details.';
       } else if (errorMessage.includes('authentication')) {
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
         userFriendlyMessage = `OpenAI API error: ${errorMessage}`;
       }
     }
-    
+
     // Return error in streaming format
     return new Response(
       `0:"${userFriendlyMessage}"\n`,
