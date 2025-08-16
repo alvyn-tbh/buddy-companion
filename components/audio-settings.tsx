@@ -15,11 +15,11 @@ interface AudioSettingsProps {
 }
 
 export function AudioSettings({
-  isAudioEnabled, 
-  onAudioToggle, 
+  isAudioEnabled,
+  onAudioToggle,
   onVoiceChange,
   voice = 'alloy',
-  className = "" 
+  className = ""
 }: AudioSettingsProps) {
   const [showSettings, setShowSettings] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export function AudioSettings({
   const handleVoiceChange = (voice: string) => {
     console.log('Voice change triggered:', voice);
     console.log('onVoiceChange callback exists:', !!onVoiceChange);
-    
+
     if (onVoiceChange) {
       console.log('Calling onVoiceChange with:', voice);
       onVoiceChange(voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer');
@@ -94,11 +94,11 @@ export function AudioSettings({
                 )}
               </Button>
             </div>
-            
+
             <div className="space-y-2">
               <span className="text-sm font-medium">Voice Avatar</span>
               <div className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <VoiceAvatarGrid 
+                <VoiceAvatarGrid
                   selectedVoice={voice}
                   onVoiceSelect={(selectedVoice) => {
                     handleVoiceChange(selectedVoice);
@@ -108,7 +108,7 @@ export function AudioSettings({
             </div>
 
             <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-              {isAudioEnabled 
+              {isAudioEnabled
                 ? `Audio is enabled with ${voice} voice avatar. Voice interactions will use this avatar.`
                 : "Audio is disabled. Enable to use voice interactions."
               }

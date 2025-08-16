@@ -153,4 +153,3 @@ export const deepInfraLogo = ({ size = 16 }: { size: number }) => {
     </svg>
   );
 };
-

@@ -58,7 +58,7 @@ export function AdminNav({ onLogout }: AdminNavProps) {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-                
+
                 return (
                   <Link
                     key={item.href}
@@ -77,11 +77,11 @@ export function AdminNav({ onLogout }: AdminNavProps) {
               })}
             </nav>
           </div>
-          
+
           <div className="flex items-center">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onLogout}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
@@ -93,4 +93,4 @@ export function AdminNav({ onLogout }: AdminNavProps) {
       </div>
     </div>
   );
-} 
+}

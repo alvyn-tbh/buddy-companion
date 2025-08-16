@@ -81,12 +81,12 @@ export function QueueDashboard() {
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/queue/status', {
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           window.location.href = '/admin/login';
@@ -94,7 +94,7 @@ export function QueueDashboard() {
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setStatus(data);
     } catch (err) {

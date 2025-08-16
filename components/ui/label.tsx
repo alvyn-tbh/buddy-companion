@@ -21,4 +21,4 @@ function Label({
   )
 }
 
-export { Label }
+export { Label };

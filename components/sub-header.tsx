@@ -7,10 +7,10 @@ import { UserProfile } from './user-profile';
 import { Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 
-export default function SubHeader(props: { 
-  title: string, 
-  chat_url: string, 
-  features_url: string, 
+export default function SubHeader(props: {
+  title: string,
+  chat_url: string,
+  features_url: string,
   how_it_works_url: string,
   isAudioEnabled?: boolean,
   onAudioToggle?: (enabled: boolean) => void,
@@ -54,19 +54,19 @@ export default function SubHeader(props: {
               {props.title}
             </span>
           </Link>
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             {/* Main Navigation Links */}
             <div className="flex items-center space-x-2 lg:space-x-4">
-              <Link 
-                href={props.features_url} 
+              <Link
+                href={props.features_url}
                 className="text-gray-600 hover:text-indigo-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Features
               </Link>
-              <Link 
-                href={props.how_it_works_url} 
+              <Link
+                href={props.how_it_works_url}
                 className="text-gray-600 hover:text-indigo-600 px-2 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 How it works
@@ -105,8 +105,8 @@ export default function SubHeader(props: {
             </div>
             {/* Audio Settings */}
             {props.isAudioEnabled !== undefined && props.onAudioToggle && (
-              <AudioSettings 
-                isAudioEnabled={props.isAudioEnabled} 
+              <AudioSettings
+                isAudioEnabled={props.isAudioEnabled}
                 onAudioToggle={props.onAudioToggle}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
@@ -118,8 +118,8 @@ export default function SubHeader(props: {
               <UserProfile />
             </div>
             {/* Try Now Button */}
-            <Link 
-              href={props.chat_url} 
+            <Link
+              href={props.chat_url}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
             >
               Try Now
@@ -130,8 +130,8 @@ export default function SubHeader(props: {
           <div className="md:hidden flex items-center space-x-2">
             {/* Audio Settings for Mobile */}
             {props.isAudioEnabled !== undefined && props.onAudioToggle && (
-              <AudioSettings 
-                isAudioEnabled={props.isAudioEnabled} 
+              <AudioSettings
+                isAudioEnabled={props.isAudioEnabled}
                 onAudioToggle={props.onAudioToggle}
                 voice={props.voice}
                 onVoiceChange={props.onVoiceChange}
@@ -158,15 +158,15 @@ export default function SubHeader(props: {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white w-full animate-fade-in-down shadow-lg rounded-b-xl overflow-x-auto">
             <div className="px-2 pt-2 pb-3 space-y-1 max-h-[80vh] overflow-y-auto">
-              <Link 
-                href={props.features_url} 
+              <Link
+                href={props.features_url}
                 className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Features
               </Link>
-              <Link 
-                href={props.how_it_works_url} 
+              <Link
+                href={props.how_it_works_url}
                 className="block px-3 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-base font-medium transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -178,29 +178,29 @@ export default function SubHeader(props: {
                   Services
                 </div>
                 <div className="space-y-1">
-                  <Link 
-                    href="/corporate" 
+                  <Link
+                    href="/corporate"
                     className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Corporate Companion
                   </Link>
-                  <Link 
-                    href="/travel" 
+                  <Link
+                    href="/travel"
                     className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Travel Companion
                   </Link>
-                  <Link 
-                    href="/emotional" 
+                  <Link
+                    href="/emotional"
                     className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Emotional Companion
                   </Link>
-                  <Link 
-                    href="/culture" 
+                  <Link
+                    href="/culture"
                     className="block px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md text-sm transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -214,8 +214,8 @@ export default function SubHeader(props: {
               </div>
               {/* Mobile Try Now Button */}
               <div className="pt-4">
-                <Link 
-                  href={props.chat_url} 
+                <Link
+                  href={props.chat_url}
                   className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-full text-base font-medium text-center hover:shadow-lg transition-all duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

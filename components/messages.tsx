@@ -12,7 +12,7 @@ export const Messages = ({
   status: "error" | "submitted" | "streaming" | "ready";
 }) => {
   const [containerRef, endRef] = useScrollToBottom();
-  
+
   return (
     <div
       className="flex-1 h-full space-y-4 overflow-y-auto py-4 px-2 sm:px-0 w-full"

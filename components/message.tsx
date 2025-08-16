@@ -222,18 +222,18 @@ const PurePreviewMessage = ({
 
 export const Message = memo(PurePreviewMessage, (prevProps, nextProps) => {
   // More efficient comparison
-  if (prevProps.status !== nextProps.status) return false;
-  if (prevProps.isLatestMessage !== nextProps.isLatestMessage) return false;
-  
+  if (prevProps.status !== nextProps.status) { return false };
+  if (prevProps.isLatestMessage !== nextProps.isLatestMessage) { return false };
+
   // Deep comparison only when necessary
-  if (prevProps.message.id !== nextProps.message.id) return false;
-  if (prevProps.message.role !== nextProps.message.role) return false;
-  
+  if (prevProps.message.id !== nextProps.message.id) { return false };
+  if (prevProps.message.role !== nextProps.message.role) { return false };
+
   // Only compare content if it's actually different
-  if (prevProps.message.content !== nextProps.message.content) return false;
-  
+  if (prevProps.message.content !== nextProps.message.content) { return false };
+
   // Use shallow comparison for parts if possible
-  if (prevProps.message.parts?.length !== nextProps.message.parts?.length) return false;
-  
+  if (prevProps.message.parts?.length !== nextProps.message.parts?.length) { return false };
+
   return true;
 });

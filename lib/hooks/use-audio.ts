@@ -23,7 +23,7 @@ export function useAudio(): UseAudioReturn {
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   // Check if speech recognition is supported (for transcription)
-  const isSpeechRecognitionSupported = typeof window !== 'undefined' && 
+  const isSpeechRecognitionSupported = typeof window !== 'undefined' &&
     ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
   const stopPlaying = useCallback(() => {
@@ -94,7 +94,7 @@ export function useAudio(): UseAudioReturn {
       // Get the audio data as a blob
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      
+
       // Create and play audio
       const audio = new Audio(audioUrl);
       setCurrentAudio(audio);
@@ -143,4 +143,4 @@ export function useAudio(): UseAudioReturn {
     stopPlaying,
     isSpeechRecognitionSupported,
   };
-} 
+}

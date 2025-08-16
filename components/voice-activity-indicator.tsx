@@ -15,11 +15,11 @@ export function VoiceActivityIndicator({
   noiseFloor,
   className
 }: VoiceActivityIndicatorProps) {
-  if (!isActive) return null;
+  if (!isActive) { return null };
 
   // Calculate volume level (0-100)
   const volumeLevel = Math.max(0, Math.min(100, ((volume - noiseFloor) / 40) * 100));
-  
+
   // Calculate bar heights based on volume
   const bars = Array(5).fill(0).map((_, i) => {
     const threshold = (i + 1) * 20;
@@ -45,7 +45,7 @@ export function VoiceActivityIndicator({
           />
         ))}
       </div>
-      
+
       {/* Status text */}
       <span className={cn(
         "text-xs font-medium transition-colors",
@@ -53,7 +53,7 @@ export function VoiceActivityIndicator({
       )}>
         {isSpeaking ? "Speaking" : "Listening"}
       </span>
-      
+
       {/* Noise floor indicator */}
       <span className="text-xs text-gray-400">
         NF: {noiseFloor.toFixed(0)}dB
@@ -63,16 +63,16 @@ export function VoiceActivityIndicator({
 }
 
 // Minimal voice indicator for tight spaces
-export function MiniVoiceIndicator({ isSpeaking, volume, className }: { 
-  isSpeaking: boolean; 
-  volume: number; 
+export function MiniVoiceIndicator({ isSpeaking, volume, className }: {
+  isSpeaking: boolean;
+  volume: number;
   className?: string;
 }) {
   const size = isSpeaking ? Math.min(16, 8 + (volume + 50) / 10) : 8;
-  
+
   return (
     <div className={cn("relative", className)}>
-      <div 
+      <div
         className={cn(
           "rounded-full transition-all duration-200",
           isSpeaking ? "bg-green-500" : "bg-gray-400"
@@ -84,7 +84,7 @@ export function MiniVoiceIndicator({ isSpeaking, volume, className }: {
         }}
       />
       {isSpeaking && (
-        <div 
+        <div
           className="absolute inset-0 rounded-full bg-green-500 animate-ping"
           style={{
             animationDuration: '1s'

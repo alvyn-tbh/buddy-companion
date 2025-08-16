@@ -13,10 +13,10 @@ interface AudioPlayerProps {
   ttsModel?: 'tts-1' | 'tts-1-hd';
 }
 
-export function AudioPlayer({ 
-  text, 
-  isEnabled, 
-  className = "", 
+export function AudioPlayer({
+  text,
+  isEnabled,
+  className = "",
   voice = 'alloy',
   ttsModel = 'tts-1'
 }: AudioPlayerProps) {
@@ -63,7 +63,7 @@ export function AudioPlayer({
       // Get the audio data as a blob
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      
+
       // Create audio element and play
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
@@ -116,7 +116,7 @@ export function AudioPlayer({
       setIsLoading(false);
       isProcessingRef.current = false;
       audioRef.current = null;
-      
+
       // Show user-friendly error message
       if (error instanceof Error) {
         if (error.message.includes('API key is not configured')) {

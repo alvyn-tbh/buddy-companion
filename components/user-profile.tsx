@@ -133,7 +133,7 @@ export function UserProfile({ className = '' }: UserProfileProps) {
               <div>Provider: {user?.provider || 'email'}</div>
               <div>Member since: {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</div>
             </div>
-            
+
             <div className="pt-2 border-t">
               <Button
                 variant="ghost"
@@ -147,7 +147,7 @@ export function UserProfile({ className = '' }: UserProfileProps) {
                 <Settings className="mr-2 h-4 w-4" />
                 Profile Settings
               </Button>
-              
+
               <Button
                 variant="ghost"
                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -163,4 +163,4 @@ export function UserProfile({ className = '' }: UserProfileProps) {
       )}
     </div>
   );
-} 
+}

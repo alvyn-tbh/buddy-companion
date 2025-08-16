@@ -26,10 +26,6 @@ function PureSuggestedPrompts({ sendMessage }: SuggestedPromptsProps) {
       label: "I am not sure I'm cut out for this job. So many more deserving people...",
       action: "I am not sure I'm cut out for this job. So many more deserving people...",
     },
-    // {
-    //   label: "I'm feeling overwhelmed with my workload. Can you help me break this down?",
-    //   action: "I'm feeling overwhelmed with my workload. Can you help me break this down?"
-    // }
   ];
 
   return (
