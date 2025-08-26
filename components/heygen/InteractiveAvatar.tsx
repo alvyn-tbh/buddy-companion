@@ -19,6 +19,7 @@ import { useStreamingAvatarSession } from "./logic/useStreamingAvatarSession";
 import { AvatarControls } from "./AvatarSession/AvatarControls";
 import { useVoiceChat } from "./logic/useVoiceChat";
 import { StreamingAvatarProvider, StreamingAvatarSessionState } from "./logic";
+import { useTextChat } from "./logic/useTextChat";
 import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
 
@@ -40,10 +41,11 @@ const DEFAULT_CONFIG: StartAvatarRequest = {
   },
 };
 
-function InteractiveAvatar() {
+function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
+  const { sendMessage } = useTextChat();
 
   const [config, setConfig] = useState<StartAvatarRequest>(DEFAULT_CONFIG);
 
@@ -103,6 +105,10 @@ function InteractiveAvatar() {
 
       await startAvatar(config);
 
+      if (initialMessage) {
+        sendMessage(initialMessage);
+      }
+
       if (isVoiceChat) {
         await startVoiceChat();
       }
@@ -158,10 +164,10 @@ function InteractiveAvatar() {
   );
 }
 
-export default function InteractiveAvatarWrapper() {
+export default function InteractiveAvatarWrapper({ initialMessage }: { initialMessage?: string }) {
   return (
     <StreamingAvatarProvider basePath={process.env.NEXT_PUBLIC_BASE_API_URL}>
-      <InteractiveAvatar />
+      <InteractiveAvatar initialMessage={initialMessage} />
     </StreamingAvatarProvider>
   );
 }

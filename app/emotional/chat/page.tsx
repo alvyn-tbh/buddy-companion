@@ -66,7 +66,7 @@ export default function Page() {
                         Choose between text-based chat or interact with our AI avatar
                     </p>
 
-                    <Tabs value={chatMode} onValueChange={(value) => setChatMode(value as 'text' | 'avatar')}>
+                    <Tabs value={chatMode} onValueChange={(value: string) => setChatMode(value as 'text' | 'avatar')}>
                         <TabsList className="grid w-full max-w-md grid-cols-2">
                             <TabsTrigger value="text" className="flex items-center gap-2">
                                 <MessageSquare className="h-4 w-4" />
@@ -92,7 +92,7 @@ export default function Page() {
                         </TabsContent>
 
                         <TabsContent value="avatar" className="mt-4">
-                            <InteractiveAvatar />
+                            <InteractiveAvatar initialMessage={"hi! my name is emotional wellness, and here is how i can be useful: I can help with anxiety, stress, overthinking, and tough emotions. Ask me for grounding exercises, gentle breathing, journaling prompts, thought reframing, or a calm check-in. I’ll listen without judgment and guide you at your pace."} />
                         </TabsContent>
                     </Tabs>
                 </div>

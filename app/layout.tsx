@@ -3,8 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from '@/lib/hooks/use-auth';
-import { StagewiseToolbar } from '@stagewise/toolbar-next';
-import ReactPlugin from '@stagewise-plugins/react';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,11 +35,6 @@ export default function RootLayout({
           {children}
         </AuthProvider>
         <Toaster />
-        <StagewiseToolbar 
-          config={{
-            plugins: [ReactPlugin],
-          }}
-        />
       </body>
     </html>
   );
