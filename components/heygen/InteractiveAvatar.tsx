@@ -20,6 +20,7 @@ import { AvatarControls } from "./AvatarSession/AvatarControls";
 import { useVoiceChat } from "./logic/useVoiceChat";
 import { StreamingAvatarProvider, StreamingAvatarSessionState } from "./logic";
 import { useTextChat } from "./logic/useTextChat";
+import { useInterrupt } from "./logic/useInterrupt";
 import { LoadingIcon } from "./Icons";
 import { MessageHistory } from "./AvatarSession/MessageHistory";
 
@@ -46,6 +47,8 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
   const { sendMessage } = useTextChat();
+  const { interrupt } = useInterrupt();
+  const hasSentInitialRef = useRef(false);
 
   const [config, setConfig] = useState<StartAvatarRequest>(DEFAULT_CONFIG);
 
@@ -83,6 +86,16 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
       });
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
         console.log(">>>>> Stream ready:", event.detail);
+        if (initialMessage && !hasSentInitialRef.current) {
+          hasSentInitialRef.current = true;
+          // Small delay to ensure pipeline is ready before first utterance
+          setTimeout(() => {
+            try {
+              interrupt();
+            } catch { }
+            sendMessage(initialMessage);
+          }, 100);
+        }
       });
       avatar.on(StreamingEvents.USER_START, (event) => {
         console.log(">>>>> User started talking:", event);
@@ -104,10 +117,6 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
       });
 
       await startAvatar(config);
-
-      if (initialMessage) {
-        sendMessage(initialMessage);
-      }
 
       if (isVoiceChat) {
         await startVoiceChat();
