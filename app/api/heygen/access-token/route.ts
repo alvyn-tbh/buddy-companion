@@ -20,8 +20,11 @@ export async function POST() {
     const res = await fetch('https://api.heygen.com/v1/streaming.create_token', {
       method: "POST",
       headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
         "x-api-key": HEYGEN_API_KEY,
       },
+      body: JSON.stringify({}),
     });
 
     console.log('🔍 [HeyGen API] HeyGen API response status:', res.status);

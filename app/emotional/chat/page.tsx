@@ -92,7 +92,7 @@ export default function Page() {
                         </TabsContent>
 
                         <TabsContent value="avatar" className="mt-4">
-                            <InteractiveAvatar initialMessage={"hi! my name is emotional wellness, and here is how i can be useful: I can help with anxiety, stress, overthinking, and tough emotions. Ask me for grounding exercises, gentle breathing, journaling prompts, thought reframing, or a calm check-in. I’ll listen without judgment and guide you at your pace."} />
+                            <InteractiveAvatar initialMessage={`I’m your emotional support companion, here to be present during life’s difficult or overwhelming moments. Whether you’re feeling lonely, anxious, stuck in overthinking or just need someone to listen, I’ll offer a safe, judgment-free space to share and reflect.`} />
                         </TabsContent>
                     </Tabs>
                 </div>

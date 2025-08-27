@@ -90,7 +90,7 @@ export default function Page() {
             </TabsContent>
 
             <TabsContent value="avatar" className="mt-4">
-              <InteractiveAvatar initialMessage={"hi! my name is corporate wellness, and here is how i can be useful: I can help with workplace stress, burnout, decision fatigue, communication, and focus. Ask me for quick grounding exercises, meeting prep, feedback practice, or structured problem-solving. I’ll keep things calm, practical, and supportive."} />
+              <InteractiveAvatar initialMessage={`I am your corporate wellness companion, designed to support you during emotionally demanding moments at work. I can help you with burnout, decision fatigue, rumination, or personal doubt by offering a calm, thoughtful space for reflection. What is your name?`} />
             </TabsContent>
           </Tabs>
         </div>
