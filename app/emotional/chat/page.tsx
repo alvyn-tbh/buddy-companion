@@ -92,7 +92,7 @@ export default function Page() {
                         </TabsContent>
 
                         <TabsContent value="avatar" className="mt-4">
-                            <InteractiveAvatar initialMessage={`I’m your emotional support companion, here to be present during life’s difficult or overwhelming moments. Whether you’re feeling lonely, anxious, stuck in overthinking or just need someone to listen, I’ll offer a safe, judgment-free space to share and reflect.`} />
+                            <InteractiveAvatar initialMessage={`I’m your emotional support companion, here to be present during life’s difficult or overwhelming moments. Whether you’re feeling lonely, anxious, stuck in overthinking or just need someone to listen, I’ll offer a safe, judgment-free space to share and reflect. What’s your name?`} />
                         </TabsContent>
                     </Tabs>
                 </div>
