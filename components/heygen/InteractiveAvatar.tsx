@@ -46,7 +46,7 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
   const { initAvatar, startAvatar, stopAvatar, sessionState, stream } =
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
-  const { sendMessage } = useTextChat();
+  const { sendMessageSync } = useTextChat();
   const { interrupt } = useInterrupt();
   const hasSentInitialRef = useRef(false);
 
@@ -77,6 +77,21 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
 
       avatar.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
         console.log("Avatar started talking", e);
+        if (initialMessage && !hasSentInitialRef.current) {
+          hasSentInitialRef.current = true;
+          try {
+            interrupt();
+          } catch {}
+          setTimeout(() => {
+            (async () => {
+              try {
+                await sendMessageSync(initialMessage);
+              } finally {
+                // no-op
+              }
+            })();
+          }, 50);
+        }
       });
       avatar.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
         console.log("Avatar stopped talking", e);
@@ -93,7 +108,18 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
             try {
               interrupt();
             } catch { }
-            sendMessage(initialMessage);
+            (async () => {
+              try {
+                await sendMessageSync(initialMessage);
+                if (isVoiceChat) {
+                  await startVoiceChat();
+                }
+              } catch {
+                if (isVoiceChat) {
+                  await startVoiceChat();
+                }
+              }
+            })();
           }, 100);
         }
       });
@@ -118,7 +144,7 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
 
       await startAvatar(config);
 
-      if (isVoiceChat) {
+      if (!initialMessage && isVoiceChat) {
         await startVoiceChat();
       }
     } catch (error) {
