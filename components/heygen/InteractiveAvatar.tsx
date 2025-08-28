@@ -36,7 +36,7 @@ const DEFAULT_CONFIG: StartAvatarRequest = {
     model: ElevenLabsModel.eleven_flash_v2_5,
   },
   language: "en",
-  voiceChatTransport: VoiceChatTransport.WEBSOCKET,
+  voiceChatTransport: VoiceChatTransport.LIVEKIT,
   sttSettings: {
     provider: STTProvider.DEEPGRAM,
   },
@@ -138,7 +138,7 @@ function InteractiveAvatar({ initialMessage }: { initialMessage?: string }) {
       avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (event) => {
         console.log(">>>>> Avatar talking message:", event);
       });
-      avatar.on(StreamingEvents.AVATAR_END_MESSAGE, (event) => {
+      avatar.on(StreamingEvents.AVATAR_END_MESSAGE, async (event) => {
         console.log(">>>>> Avatar end message:", event);
       });
 
